@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chess Engine</title>
+  <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f0f1a;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      padding: 24px;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      letter-spacing: 4px;
+      color: #ffffff;
+      text-transform: uppercase;
+    }
+
+    #board-wrap { position: relative; }
+    #board { width: min(480px, 90vw); }
+
+    #status {
+      font-size: 0.95rem;
+      color: #aaa;
+      min-height: 22px;
+      text-align: center;
+    }
+
+    #status.check  { color: #f0a500; font-weight: bold; }
+    #status.over   { color: #e94560; font-weight: bold; }
+
+    #controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    button {
+      padding: 9px 22px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 600;
+      transition: opacity 0.15s;
+    }
+    button:hover { opacity: 0.85; }
+
+    #btn-new  { background: #e94560; color: #fff; }
+    #btn-flip { background: #2a2a3e; color: #ccc; border: 1px solid #444; }
+
+    select {
+      padding: 9px 14px;
+      border-radius: 6px;
+      background: #2a2a3e;
+      color: #ccc;
+      border: 1px solid #444;
+      font-size: 0.88rem;
+      cursor: pointer;
+    }
+
+    #thinking-bar {
+      width: min(480px, 90vw);
+      height: 3px;
+      background: #2a2a3e;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    #thinking-fill {
+      height: 100%;
+      width: 0%;
+      background: #e94560;
+      transition: width 0.1s;
+    }
+    #thinking-bar.active #thinking-fill {
+      animation: thinking 1.2s ease-in-out infinite;
+    }
+    @keyframes thinking {
+      0%   { width: 0%; margin-left: 0; }
+      50%  { width: 60%; margin-left: 20%; }
+      100% { width: 0%; margin-left: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Chess Engine</h1>
+  <div id="status">Your turn — play as White</div>
+  <div id="thinking-bar"><div id="thinking-fill"></div></div>
+  <div id="board"></div>
+  <div id="controls">
+    <button id="btn-new">New Game</button>
+    <button id="btn-flip">Flip Board</button>
+    <select id="depth">
+      <option value="2">Easy (depth 2)</option>
+      <option value="3" selected>Medium (depth 3)</option>
+      <option value="4">Hard (depth 4)</option>
+    </select>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+  <script>
+    const game = new Chess();
+    let board, thinking = false;
+
+    const statusEl = document.getElementById('status');
+    const thinkingBar = document.getElementById('thinking-bar');
+
+    function setStatus(msg, cls = '') {
+      statusEl.textContent = msg;
+      statusEl.className = cls;
+    }
+
+    function setThinking(active) {
+      thinking = active;
+      thinkingBar.classList.toggle('active', active);
+    }
+
+    function onDragStart(source, piece) {
+      if (thinking || game.game_over()) return false;
+      // Player is always white
+      if (piece.startsWith('b')) return false;
+    }
+
+    function onDrop(source, target) {
+      // Try the move client-side first for instant feedback
+      const move = game.move({ from: source, to: target, promotion: 'q' });
+      if (move === null) return 'snapback';
+
+      setThinking(true);
+      setStatus('Engine thinking...');
+
+      const depth = parseInt(document.getElementById('depth').value);
+
+      fetch('/move', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ move: source + target + (move.flags.includes('p') ? 'q' : ''), depth })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) {
+          game.undo();
+          board.position(game.fen());
+          setStatus('Illegal move — try again');
+          setThinking(false);
+          return;
+        }
+
+        game.load(data.fen);
+        board.position(data.fen);
+        setThinking(false);
+
+        if (data.game_over) {
+          setStatus(data.result, 'over');
+        } else if (data.in_check) {
+          setStatus('Check! Your turn', 'check');
+        } else {
+          setStatus('Your turn — play as White');
+        }
+      })
+      .catch(() => {
+        game.undo();
+        board.position(game.fen());
+        setStatus('Connection error');
+        setThinking(false);
+      });
+    }
+
+    function onSnapEnd() {
+      board.position(game.fen());
+    }
+
+    board = Chessboard('board', {
+      draggable: true,
+      position: 'start',
+      onDragStart,
+      onDrop,
+      onSnapEnd,
+      pieceTheme: 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/img/chesspieces/wikipedia/{piece}.png'
+    });
+
+    document.getElementById('btn-new').addEventListener('click', () => {
+      fetch('/new', { method: 'POST' })
+        .then(r => r.json())
+        .then(() => {
+          game.reset();
+          board.start();
+          setThinking(false);
+          setStatus('New game — your turn as White');
+        });
+    });
+
+    document.getElementById('btn-flip').addEventListener('click', () => board.flip());
+
+    $(window).resize(() => board.resize());
+  </script>
+</body>
+</html>

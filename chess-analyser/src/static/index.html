@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chess Stats</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f0f1a;
+      color: #e0e0e0;
+      padding: 32px 24px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      margin-bottom: 28px;
+      color: #fff;
+    }
+
+    /* ── Stat cards ───────────────────────────────── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 14px;
+      margin-bottom: 32px;
+    }
+
+    .card {
+      background: #1a1a2e;
+      border-radius: 10px;
+      padding: 18px 20px;
+      border: 1px solid #2a2a40;
+    }
+
+    .card-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #888;
+      margin-bottom: 6px;
+    }
+
+    .card-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .card-value span {
+      font-size: 1rem;
+      color: #aaa;
+      font-weight: 400;
+    }
+
+    /* ── Chart grid ───────────────────────────────── */
+    .charts {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 640px) { .charts { grid-template-columns: 1fr; } }
+
+    .chart-box {
+      background: #1a1a2e;
+      border-radius: 10px;
+      padding: 20px;
+      border: 1px solid #2a2a40;
+    }
+
+    .chart-box.wide { grid-column: 1 / -1; }
+
+    .chart-box h2 {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #888;
+      margin-bottom: 16px;
+    }
+
+    canvas { width: 100% !important; }
+
+    #loading {
+      text-align: center;
+      color: #666;
+      margin-top: 60px;
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Chess Stats Dashboard</h1>
+
+  <div id="loading">Loading your games...</div>
+
+  <div id="app" style="display:none">
+    <div class="cards">
+      <div class="card">
+        <div class="card-label">Total Games</div>
+        <div class="card-value" id="c-total">—</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Win Rate</div>
+        <div class="card-value" id="c-winrate">—<span>%</span></div>
+      </div>
+      <div class="card">
+        <div class="card-label">As White</div>
+        <div class="card-value" id="c-white">—<span>%</span></div>
+      </div>
+      <div class="card">
+        <div class="card-label">As Black</div>
+        <div class="card-value" id="c-black">—<span>%</span></div>
+      </div>
+    </div>
+
+    <div class="charts">
+      <div class="chart-box">
+        <h2>Overall Record</h2>
+        <canvas id="chart-overall"></canvas>
+      </div>
+      <div class="chart-box">
+        <h2>Win Rate by Colour</h2>
+        <canvas id="chart-color"></canvas>
+      </div>
+      <div class="chart-box wide">
+        <h2>Win Rate Over Time</h2>
+        <canvas id="chart-time"></canvas>
+      </div>
+      <div class="chart-box wide">
+        <h2>Top Openings — Win Rate</h2>
+        <canvas id="chart-openings"></canvas>
+      </div>
+      <div class="chart-box">
+        <h2>By Time Control</h2>
+        <canvas id="chart-tc"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const COLOURS = {
+      win:  '#4ade80',
+      draw: '#facc15',
+      loss: '#f87171',
+      blue: '#60a5fa',
+      purple: '#a78bfa'
+    };
+
+    const chartDefaults = {
+      plugins: { legend: { labels: { color: '#ccc', font: { size: 12 } } } },
+      scales: {
+        x: { ticks: { color: '#999' }, grid: { color: '#1f1f30' } },
+        y: { ticks: { color: '#999' }, grid: { color: '#1f1f30' } }
+      }
+    };
+
+    function makeChart(id, type, data, options = {}) {
+      return new Chart(document.getElementById(id), {
+        type,
+        data,
+        options: { responsive: true, ...chartDefaults, ...options }
+      });
+    }
+
+    fetch('/api/stats')
+      .then(r => r.json())
+      .then(d => {
+        if (!d.total_games) {
+          document.getElementById('loading').textContent =
+            'No games found. Run fetch.py first.';
+          return;
+        }
+
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+
+        // ── Cards ────────────────────────────────────────────────────────
+        document.getElementById('c-total').innerHTML =
+          d.total_games + '<span> games</span>';
+        document.getElementById('c-winrate').innerHTML =
+          d.win_rate + '<span>%</span>';
+        document.getElementById('c-white').innerHTML =
+          (d.by_color?.white?.win_rate ?? '—') + '<span>%</span>';
+        document.getElementById('c-black').innerHTML =
+          (d.by_color?.black?.win_rate ?? '—') + '<span>%</span>';
+
+        // ── Overall doughnut ─────────────────────────────────────────────
+        const ov = d.overall || {};
+        makeChart('chart-overall', 'doughnut', {
+          labels: ['Wins', 'Draws', 'Losses'],
+          datasets: [{
+            data: [ov.win || 0, ov.draw || 0, ov.loss || 0],
+            backgroundColor: [COLOURS.win, COLOURS.draw, COLOURS.loss],
+            borderWidth: 0
+          }]
+        }, { scales: {} });
+
+        // ── Win rate by colour ───────────────────────────────────────────
+        makeChart('chart-color', 'bar', {
+          labels: ['White', 'Black'],
+          datasets: [{
+            label: 'Win Rate %',
+            data: [
+              d.by_color?.white?.win_rate ?? 0,
+              d.by_color?.black?.win_rate ?? 0
+            ],
+            backgroundColor: [COLOURS.blue, COLOURS.purple],
+            borderRadius: 6
+          }]
+        }, {
+          scales: {
+            ...chartDefaults.scales,
+            y: { ...chartDefaults.scales.y, max: 100,
+                 ticks: { color: '#999', callback: v => v + '%' } }
+          },
+          plugins: { legend: { display: false } }
+        });
+
+        // ── Win rate over time ───────────────────────────────────────────
+        const ot = d.over_time || [];
+        makeChart('chart-time', 'line', {
+          labels: ot.map(r => r.month),
+          datasets: [{
+            label: 'Win Rate %',
+            data: ot.map(r => r.win_rate),
+            borderColor: COLOURS.blue,
+            backgroundColor: 'rgba(96,165,250,0.12)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 3
+          }]
+        }, {
+          scales: {
+            ...chartDefaults.scales,
+            y: { ...chartDefaults.scales.y, max: 100,
+                 ticks: { color: '#999', callback: v => v + '%' } }
+          }
+        });
+
+        // ── Top openings ─────────────────────────────────────────────────
+        const op = d.top_openings || [];
+        makeChart('chart-openings', 'bar', {
+          labels: op.map(o => o.name.length > 30 ? o.name.slice(0, 28) + '…' : o.name),
+          datasets: [{
+            label: 'Win Rate %',
+            data: op.map(o => o.win_rate),
+            backgroundColor: COLOURS.purple,
+            borderRadius: 4
+          }, {
+            label: 'Games played',
+            data: op.map(o => o.total),
+            backgroundColor: 'rgba(250,204,21,0.3)',
+            borderRadius: 4,
+            yAxisID: 'y2'
+          }]
+        }, {
+          scales: {
+            ...chartDefaults.scales,
+            y: { ...chartDefaults.scales.y,
+                 ticks: { color: '#999', callback: v => v + '%' } },
+            y2: { position: 'right', ticks: { color: '#999' },
+                  grid: { drawOnChartArea: false } }
+          }
+        });
+
+        // ── Time control ─────────────────────────────────────────────────
+        const tc = d.by_time_control || [];
+        makeChart('chart-tc', 'doughnut', {
+          labels: tc.map(t => `${t.control} (${t.total})`),
+          datasets: [{
+            data: tc.map(t => t.total),
+            backgroundColor: ['#60a5fa','#a78bfa','#4ade80','#facc15','#f87171'],
+            borderWidth: 0
+          }]
+        }, { scales: {} });
+      })
+      .catch(() => {
+        document.getElementById('loading').textContent =
+          'Could not load stats. Is app.py running?';
+      });
+  </script>
+</body>
+</html>
