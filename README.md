@@ -1,26 +1,52 @@
 # Chess Projects — UCAS Portfolio
 
-Two projects built to demonstrate CS knowledge and genuine interest for university applications.
+Three projects built to demonstrate CS knowledge and genuine interest for university applications. All run fully offline.
 
 ## Projects
 
-| Project | Description | Status |
+| Project | Description | Port |
 |---|---|---|
-| [chess-engine](./chess-engine/) | Chess engine with minimax + alpha-beta pruning, playable via web UI | In progress |
-| [chess-analyser](./chess-analyser/) | Personal game stats dashboard pulling from Chess.com / Lichess API | In progress |
+| [chess-engine](./chess-engine/) | Chess engine with minimax + alpha-beta pruning, playable in your browser | 5000 |
+| [chess-analyser](./chess-analyser/) | Personal game stats dashboard — pulls from Chess.com / Lichess, works offline after first fetch | 5001 |
+| [chess-puzzle-generator](./chess-puzzle-generator/) | Generates tactical puzzles using the engine itself, stores them locally, lets you train offline | 5002 |
+
+## Quick start
+
+Each project is independent. Navigate into the folder and follow its README.
+
+```bash
+# Chess Engine
+cd chess-engine
+pip install -r requirements.txt
+python src/app.py          # → http://localhost:5000
+
+# Chess Analyser
+cd chess-analyser
+pip install -r requirements.txt
+python src/fetch.py lichess YOUR_USERNAME   # fetch games once
+python src/app.py          # → http://localhost:5001
+
+# Puzzle Generator
+cd chess-puzzle-generator
+pip install -r requirements.txt
+python src/app.py          # generates starter puzzles then → http://localhost:5002
+```
+
+## Running the tests
+
+```bash
+# From inside each project directory:
+pytest tests/
+```
 
 ## Purpose
 
-These projects are built to:
-- Demonstrate algorithms knowledge (minimax, recursion, optimisation)
-- Show genuine interest in CS through a personal passion (chess)
-- Produce material for UCAS personal statement
+These projects demonstrate:
+- Algorithm design: minimax, alpha-beta pruning, recursive search, heuristics
+- Data pipelines: API integration, local caching, SQLite
+- Software design: self-contained systems with no network dependency at runtime
+- Web development: Flask backends, JavaScript frontends, REST APIs
 
-## Skills Demonstrated
+## Skills demonstrated
 
-- Python / JavaScript
-- Algorithm design (minimax, alpha-beta pruning)
-- REST API integration (Lichess / Chess.com)
-- Data visualisation
-- Web development (Flask / FastAPI + frontend)
-- Git version control and documentation
+Python · JavaScript · Flask · SQLite · REST APIs · algorithm design · git

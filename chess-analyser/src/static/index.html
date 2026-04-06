@@ -25,7 +25,7 @@
       color: #fff;
     }
 
-    /* ── Stat cards ───────────────────────────────── */
+    /* ── Stat cards ── */
     .cards {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -39,7 +39,6 @@
       padding: 18px 20px;
       border: 1px solid #2a2a40;
     }
-
     .card-label {
       font-size: 0.75rem;
       text-transform: uppercase;
@@ -47,26 +46,45 @@
       color: #888;
       margin-bottom: 6px;
     }
-
     .card-value {
       font-size: 2rem;
       font-weight: 700;
       color: #fff;
     }
+    .card-value span { font-size: 1rem; color: #aaa; font-weight: 400; }
 
-    .card-value span {
-      font-size: 1rem;
-      color: #aaa;
-      font-weight: 400;
+    /* ── Insight cards ── */
+    .insights {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin-bottom: 28px;
     }
+    .insight {
+      background: #1a1a2e;
+      border-radius: 10px;
+      padding: 16px 18px;
+      border: 1px solid #2a2a40;
+    }
+    .insight-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #888;
+      margin-bottom: 6px;
+    }
+    .insight-name  { font-size: 1rem; font-weight: 600; color: #fff; margin-bottom: 2px; }
+    .insight-sub   { font-size: 0.8rem; color: #888; }
+    .insight-value { font-size: 1.4rem; font-weight: 700; }
+    .insight-value.good { color: #4ade80; }
+    .insight-value.bad  { color: #f87171; }
 
-    /* ── Chart grid ───────────────────────────────── */
+    /* ── Charts ── */
     .charts {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 20px;
     }
-
     @media (max-width: 640px) { .charts { grid-template-columns: 1fr; } }
 
     .chart-box {
@@ -75,9 +93,7 @@
       padding: 20px;
       border: 1px solid #2a2a40;
     }
-
     .chart-box.wide { grid-column: 1 / -1; }
-
     .chart-box h2 {
       font-size: 0.78rem;
       text-transform: uppercase;
@@ -85,7 +101,6 @@
       color: #888;
       margin-bottom: 16px;
     }
-
     canvas { width: 100% !important; }
 
     #loading {
@@ -99,10 +114,11 @@
 <body>
 
   <h1>Chess Stats Dashboard</h1>
-
   <div id="loading">Loading your games...</div>
 
   <div id="app" style="display:none">
+
+    <!-- Stat cards -->
     <div class="cards">
       <div class="card">
         <div class="card-label">Total Games</div>
@@ -122,6 +138,10 @@
       </div>
     </div>
 
+    <!-- Insight cards: best + worst opening -->
+    <div class="insights" id="insights" style="display:none"></div>
+
+    <!-- Charts -->
     <div class="charts">
       <div class="chart-box">
         <h2>Overall Record</h2>
@@ -136,7 +156,7 @@
         <canvas id="chart-time"></canvas>
       </div>
       <div class="chart-box wide">
-        <h2>Top Openings — Win Rate</h2>
+        <h2>Top Openings — Wins / Draws / Losses</h2>
         <canvas id="chart-openings"></canvas>
       </div>
       <div class="chart-box">
@@ -147,15 +167,16 @@
   </div>
 
   <script>
-    const COLOURS = {
-      win:  '#4ade80',
-      draw: '#facc15',
-      loss: '#f87171',
-      blue: '#60a5fa',
-      purple: '#a78bfa'
+    const C = {
+      win:    '#4ade80',
+      draw:   '#facc15',
+      loss:   '#f87171',
+      blue:   '#60a5fa',
+      purple: '#a78bfa',
+      winBg:  'rgba(74,222,128,0.15)',
     };
 
-    const chartDefaults = {
+    const BASE_OPTS = {
       plugins: { legend: { labels: { color: '#ccc', font: { size: 12 } } } },
       scales: {
         x: { ticks: { color: '#999' }, grid: { color: '#1f1f30' } },
@@ -163,12 +184,16 @@
       }
     };
 
-    function makeChart(id, type, data, options = {}) {
+    function chart(id, type, data, extra = {}) {
       return new Chart(document.getElementById(id), {
         type,
         data,
-        options: { responsive: true, ...chartDefaults, ...options }
+        options: { responsive: true, ...BASE_OPTS, ...extra }
       });
+    }
+
+    function pct(scale) {
+      return { ...scale, ticks: { ...scale.ticks, callback: v => v + '%' }, max: 100 };
     }
 
     fetch('/api/stats')
@@ -183,109 +208,139 @@
         document.getElementById('loading').style.display = 'none';
         document.getElementById('app').style.display = 'block';
 
-        // ── Cards ────────────────────────────────────────────────────────
-        document.getElementById('c-total').innerHTML =
-          d.total_games + '<span> games</span>';
-        document.getElementById('c-winrate').innerHTML =
-          d.win_rate + '<span>%</span>';
-        document.getElementById('c-white').innerHTML =
-          (d.by_color?.white?.win_rate ?? '—') + '<span>%</span>';
-        document.getElementById('c-black').innerHTML =
-          (d.by_color?.black?.win_rate ?? '—') + '<span>%</span>';
+        // ── Cards ─────────────────────────────────────────────────────────
+        document.getElementById('c-total').innerHTML   = d.total_games + '<span> games</span>';
+        document.getElementById('c-winrate').innerHTML = d.win_rate + '<span>%</span>';
+        document.getElementById('c-white').innerHTML   = (d.by_color?.white?.win_rate ?? '—') + '<span>%</span>';
+        document.getElementById('c-black').innerHTML   = (d.by_color?.black?.win_rate ?? '—') + '<span>%</span>';
 
-        // ── Overall doughnut ─────────────────────────────────────────────
+        // ── Insight cards (best / worst opening, min 5 games) ─────────────
+        const op = d.top_openings || [];
+        const qualified = op.filter(o => o.total >= 5);
+        if (qualified.length >= 2) {
+          const best  = [...qualified].sort((a, b) => b.win_rate - a.win_rate)[0];
+          const worst = [...qualified].sort((a, b) => a.win_rate - b.win_rate)[0];
+          const insEl = document.getElementById('insights');
+          insEl.style.display = 'grid';
+          insEl.innerHTML = `
+            <div class="insight">
+              <div class="insight-label">Best Opening</div>
+              <div class="insight-name">${best.name}</div>
+              <div class="insight-sub">${best.total} games</div>
+              <div class="insight-value good">${best.win_rate}% wins</div>
+            </div>
+            <div class="insight">
+              <div class="insight-label">Worst Opening</div>
+              <div class="insight-name">${worst.name}</div>
+              <div class="insight-sub">${worst.total} games</div>
+              <div class="insight-value bad">${worst.win_rate}% wins</div>
+            </div>
+          `;
+        }
+
+        // ── Overall doughnut ──────────────────────────────────────────────
         const ov = d.overall || {};
-        makeChart('chart-overall', 'doughnut', {
+        chart('chart-overall', 'doughnut', {
           labels: ['Wins', 'Draws', 'Losses'],
           datasets: [{
             data: [ov.win || 0, ov.draw || 0, ov.loss || 0],
-            backgroundColor: [COLOURS.win, COLOURS.draw, COLOURS.loss],
+            backgroundColor: [C.win, C.draw, C.loss],
             borderWidth: 0
           }]
         }, { scales: {} });
 
-        // ── Win rate by colour ───────────────────────────────────────────
-        makeChart('chart-color', 'bar', {
+        // ── Win rate by colour ────────────────────────────────────────────
+        chart('chart-color', 'bar', {
           labels: ['White', 'Black'],
           datasets: [{
             label: 'Win Rate %',
-            data: [
-              d.by_color?.white?.win_rate ?? 0,
-              d.by_color?.black?.win_rate ?? 0
-            ],
-            backgroundColor: [COLOURS.blue, COLOURS.purple],
+            data: [d.by_color?.white?.win_rate ?? 0, d.by_color?.black?.win_rate ?? 0],
+            backgroundColor: [C.blue, C.purple],
             borderRadius: 6
           }]
         }, {
           scales: {
-            ...chartDefaults.scales,
-            y: { ...chartDefaults.scales.y, max: 100,
-                 ticks: { color: '#999', callback: v => v + '%' } }
+            x: BASE_OPTS.scales.x,
+            y: pct({ ...BASE_OPTS.scales.y })
           },
           plugins: { legend: { display: false } }
         });
 
-        // ── Win rate over time ───────────────────────────────────────────
+        // ── Win rate over time ────────────────────────────────────────────
         const ot = d.over_time || [];
-        makeChart('chart-time', 'line', {
+        chart('chart-time', 'line', {
           labels: ot.map(r => r.month),
           datasets: [{
             label: 'Win Rate %',
             data: ot.map(r => r.win_rate),
-            borderColor: COLOURS.blue,
-            backgroundColor: 'rgba(96,165,250,0.12)',
+            borderColor: C.blue,
+            backgroundColor: C.winBg,
             fill: true,
             tension: 0.3,
             pointRadius: 3
-          }]
-        }, {
-          scales: {
-            ...chartDefaults.scales,
-            y: { ...chartDefaults.scales.y, max: 100,
-                 ticks: { color: '#999', callback: v => v + '%' } }
-          }
-        });
-
-        // ── Top openings ─────────────────────────────────────────────────
-        const op = d.top_openings || [];
-        makeChart('chart-openings', 'bar', {
-          labels: op.map(o => o.name.length > 30 ? o.name.slice(0, 28) + '…' : o.name),
-          datasets: [{
-            label: 'Win Rate %',
-            data: op.map(o => o.win_rate),
-            backgroundColor: COLOURS.purple,
-            borderRadius: 4
           }, {
             label: 'Games played',
-            data: op.map(o => o.total),
-            backgroundColor: 'rgba(250,204,21,0.3)',
-            borderRadius: 4,
+            data: ot.map(r => r.total),
+            borderColor: C.purple,
+            backgroundColor: 'transparent',
+            tension: 0.3,
+            pointRadius: 3,
             yAxisID: 'y2'
           }]
         }, {
           scales: {
-            ...chartDefaults.scales,
-            y: { ...chartDefaults.scales.y,
-                 ticks: { color: '#999', callback: v => v + '%' } },
-            y2: { position: 'right', ticks: { color: '#999' },
-                  grid: { drawOnChartArea: false } }
+            x: BASE_OPTS.scales.x,
+            y: { ...pct(BASE_OPTS.scales.y), position: 'left' },
+            y2: { position: 'right', ticks: { color: '#999' }, grid: { drawOnChartArea: false } }
           }
         });
 
-        // ── Time control ─────────────────────────────────────────────────
+        // ── Top openings — stacked wins/draws/losses ──────────────────────
+        const labels = op.map(o => o.name.length > 28 ? o.name.slice(0, 26) + '…' : o.name);
+        chart('chart-openings', 'bar', {
+          labels,
+          datasets: [
+            {
+              label: 'Wins',
+              data: op.map(o => o.wins),
+              backgroundColor: C.win,
+              borderRadius: 2
+            },
+            {
+              label: 'Draws',
+              data: op.map(o => o.draws),
+              backgroundColor: C.draw,
+              borderRadius: 2
+            },
+            {
+              label: 'Losses',
+              data: op.map(o => o.losses),
+              backgroundColor: C.loss,
+              borderRadius: 2
+            }
+          ]
+        }, {
+          scales: {
+            x: { ...BASE_OPTS.scales.x, stacked: true },
+            y: { ...BASE_OPTS.scales.y, stacked: true }
+          },
+          plugins: { legend: { labels: { color: '#ccc', font: { size: 12 } } } }
+        });
+
+        // ── Time control ──────────────────────────────────────────────────
         const tc = d.by_time_control || [];
-        makeChart('chart-tc', 'doughnut', {
+        chart('chart-tc', 'doughnut', {
           labels: tc.map(t => `${t.control} (${t.total})`),
           datasets: [{
             data: tc.map(t => t.total),
-            backgroundColor: ['#60a5fa','#a78bfa','#4ade80','#facc15','#f87171'],
+            backgroundColor: [C.blue, C.purple, C.win, C.draw, C.loss],
             borderWidth: 0
           }]
         }, { scales: {} });
       })
       .catch(() => {
         document.getElementById('loading').textContent =
-          'Could not load stats. Is app.py running?';
+          'Could not load stats — is app.py running?';
       });
   </script>
 </body>

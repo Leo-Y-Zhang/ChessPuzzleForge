@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chess Puzzle Trainer</title>
+  <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f0f1a;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 28px 20px 40px;
+      gap: 20px;
+    }
+
+    h1 {
+      font-size: 1.3rem;
+      letter-spacing: 4px;
+      color: #fff;
+      text-transform: uppercase;
+    }
+
+    /* ── Layout ── */
+    .layout {
+      display: flex;
+      gap: 28px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      justify-content: center;
+      width: 100%;
+      max-width: 900px;
+    }
+
+    .board-col { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    #board { width: min(480px, 90vw); }
+
+    /* ── Status banner ── */
+    #status {
+      width: min(480px, 90vw);
+      text-align: center;
+      font-size: 0.95rem;
+      padding: 10px 16px;
+      border-radius: 8px;
+      background: #1a1a2e;
+      border: 1px solid #2a2a40;
+      min-height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.3s, border-color 0.3s;
+    }
+    #status.correct  { background: #0d2e1a; border-color: #4ade80; color: #4ade80; }
+    #status.wrong    { background: #2e0d0d; border-color: #f87171; color: #f87171; }
+    #status.complete { background: #1a2e0d; border-color: #4ade80; color: #4ade80; font-weight: 700; }
+    #status.info     { color: #60a5fa; }
+
+    /* ── Controls ── */
+    .controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+    button {
+      padding: 9px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    button:hover  { opacity: 0.85; }
+    button:active { transform: scale(0.97); }
+    button:disabled { opacity: 0.4; cursor: default; }
+
+    #btn-next     { background: #e94560; color: #fff; }
+    #btn-solution { background: #2a2a3e; color: #ccc; border: 1px solid #444; }
+    #btn-flip     { background: #2a2a3e; color: #ccc; border: 1px solid #444; }
+
+    select {
+      padding: 9px 14px;
+      border-radius: 6px;
+      background: #2a2a3e;
+      color: #ccc;
+      border: 1px solid #444;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    /* ── Info panel ── */
+    .info-col {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-width: 200px;
+      max-width: 260px;
+    }
+
+    .card {
+      background: #1a1a2e;
+      border: 1px solid #2a2a40;
+      border-radius: 10px;
+      padding: 16px 18px;
+    }
+
+    .card h2 {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #888;
+      margin-bottom: 10px;
+    }
+
+    /* Theme badge */
+    .theme-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: capitalize;
+      background: #2a2a40;
+      color: #ccc;
+    }
+    .theme-badge.mate_in_1, .theme-badge.mate_in_2, .theme-badge.mate_in_3 {
+      background: #4a0d0d; color: #f87171;
+    }
+    .theme-badge.fork        { background: #0d2e4a; color: #60a5fa; }
+    .theme-badge.pin         { background: #2e1a4a; color: #a78bfa; }
+    .theme-badge.skewer      { background: #2e2a0d; color: #facc15; }
+    .theme-badge.back_rank   { background: #0d2e1a; color: #4ade80; }
+    .theme-badge.discovered_attack { background: #4a2e0d; color: #fb923c; }
+    .theme-badge.hanging_piece     { background: #1a2e0d; color: #86efac; }
+    .theme-badge.tactics     { background: #2a2a3e; color: #94a3b8; }
+
+    .puzzle-meta { font-size: 0.9rem; color: #bbb; line-height: 1.8; }
+    .puzzle-meta span { color: #fff; font-weight: 600; }
+
+    /* Progress bar */
+    .progress-wrap {
+      height: 6px;
+      background: #2a2a3e;
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    .progress-fill {
+      height: 100%;
+      background: #4ade80;
+      border-radius: 3px;
+      transition: width 0.4s ease;
+    }
+
+    /* Stats grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .stat-item { text-align: center; }
+    .stat-val  { font-size: 1.5rem; font-weight: 700; color: #fff; }
+    .stat-lbl  { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: #888; }
+
+    /* Generate panel */
+    .generate-row { display: flex; gap: 8px; align-items: center; }
+    #btn-generate {
+      background: #2a2a3e;
+      color: #ccc;
+      border: 1px solid #444;
+      padding: 7px 14px;
+      font-size: 0.8rem;
+    }
+    #gen-status { font-size: 0.78rem; color: #888; }
+
+    /* Thinking bar */
+    #thinking-bar {
+      width: min(480px, 90vw);
+      height: 3px;
+      background: #2a2a3e;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    #thinking-fill { height: 100%; width: 0; background: #e94560; }
+    #thinking-bar.active #thinking-fill {
+      animation: think 1.2s ease-in-out infinite;
+    }
+    @keyframes think {
+      0%   { width: 0%;  margin-left: 0; }
+      50%  { width: 60%; margin-left: 20%; }
+      100% { width: 0%;  margin-left: 100%; }
+    }
+
+    @media (max-width: 600px) { .info-col { max-width: 100%; width: 100%; } }
+  </style>
+</head>
+<body>
+
+<h1>Puzzle Trainer</h1>
+
+<div class="layout">
+
+  <!-- Board column -->
+  <div class="board-col">
+    <div id="status" class="info">Loading puzzles...</div>
+    <div id="thinking-bar"><div id="thinking-fill"></div></div>
+    <div id="board"></div>
+    <div class="controls">
+      <button id="btn-next">Next Puzzle</button>
+      <button id="btn-solution">Show Solution</button>
+      <button id="btn-flip">Flip Board</button>
+      <select id="theme-select">
+        <option value="all">All Themes</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Info column -->
+  <div class="info-col">
+
+    <div class="card" id="card-puzzle">
+      <h2>Current Puzzle</h2>
+      <div class="puzzle-meta">
+        Theme: <span id="meta-theme">—</span><br>
+        Rating: <span id="meta-rating">—</span><br>
+        To move: <span id="meta-tomove">—</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Your Progress</h2>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-val" id="stat-total">—</div>
+          <div class="stat-lbl">Puzzles</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-val" id="stat-solved">—</div>
+          <div class="stat-lbl">Solved</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-val" id="stat-attempts">—</div>
+          <div class="stat-lbl">Attempts</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-val" id="stat-pct">—</div>
+          <div class="stat-lbl">Success%</div>
+        </div>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Generate More Puzzles</h2>
+      <p style="font-size:0.8rem;color:#888;margin-bottom:10px;">
+        Puzzles are generated offline using the chess engine. Each batch takes ~30 seconds.
+      </p>
+      <div class="generate-row">
+        <button id="btn-generate">Generate 20</button>
+        <span id="gen-status"></span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<script>
+  // ── State ──────────────────────────────────────────────────────────────────
+  let board, game;
+  let puzzleId = null;
+  let moveIndex = 0;
+  let puzzleActive = false;
+
+  const statusEl    = document.getElementById('status');
+  const thinkBar    = document.getElementById('thinking-bar');
+  const progressFil = document.getElementById('progress-fill');
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  function setStatus(msg, cls = '') {
+    statusEl.textContent = msg;
+    statusEl.className = cls;
+  }
+
+  function setThinking(on) {
+    thinkBar.classList.toggle('active', on);
+  }
+
+  function setThemeBadge(theme) {
+    const el = document.getElementById('meta-theme');
+    el.innerHTML = `<span class="theme-badge ${theme}">${theme.replace(/_/g, ' ')}</span>`;
+  }
+
+  // ── Stats ──────────────────────────────────────────────────────────────────
+  function refreshStats() {
+    fetch('/api/stats')
+      .then(r => r.json())
+      .then(d => {
+        document.getElementById('stat-total').textContent    = d.total_puzzles;
+        document.getElementById('stat-solved').textContent   = d.solved_puzzles;
+        document.getElementById('stat-attempts').textContent = d.total_attempts;
+        const pct = d.total_attempts > 0
+          ? Math.round(d.solved_puzzles / d.total_puzzles * 100) : 0;
+        document.getElementById('stat-pct').textContent = pct + '%';
+        progressFil.style.width = pct + '%';
+      });
+  }
+
+  // ── Themes dropdown ────────────────────────────────────────────────────────
+  function loadThemes() {
+    fetch('/api/themes')
+      .then(r => r.json())
+      .then(themes => {
+        const sel = document.getElementById('theme-select');
+        themes.forEach(t => {
+          const opt = document.createElement('option');
+          opt.value = t.theme;
+          opt.textContent = `${t.theme.replace(/_/g, ' ')} (${t.count})`;
+          sel.appendChild(opt);
+        });
+      });
+  }
+
+  // ── Load puzzle ────────────────────────────────────────────────────────────
+  function loadPuzzle() {
+    puzzleActive = false;
+    setThinking(true);
+    const theme = document.getElementById('theme-select').value;
+    fetch('/api/puzzle/next' + (theme !== 'all' ? `?theme=${theme}` : ''))
+      .then(r => r.json())
+      .then(data => {
+        setThinking(false);
+        if (data.error) {
+          setStatus(data.error, 'info');
+          return;
+        }
+        puzzleId  = data.id;
+        moveIndex = 0;
+        puzzleActive = true;
+
+        game = new Chess(data.fen);
+        board.position(data.fen);
+
+        // Orient board toward the player to move
+        if (data.to_move === 'Black') {
+          board.flip();
+        } else {
+          board.orientation('white');
+        }
+
+        document.getElementById('meta-rating').textContent = `~${data.rating}`;
+        document.getElementById('meta-tomove').textContent = data.to_move;
+        setThemeBadge(data.theme);
+        setStatus(`${data.to_move} to move — find the best move`, 'info');
+        refreshStats();
+      })
+      .catch(() => {
+        setThinking(false);
+        setStatus('Could not load puzzle — is app.py running?');
+      });
+  }
+
+  // ── Board interaction ──────────────────────────────────────────────────────
+  function onDragStart(source, piece) {
+    if (!puzzleActive || game.game_over()) return false;
+    const toMoveWhite = game.turn() === 'w';
+    if (toMoveWhite  && piece.startsWith('b')) return false;
+    if (!toMoveWhite && piece.startsWith('w')) return false;
+  }
+
+  function onDrop(source, target) {
+    const move = game.move({ from: source, to: target, promotion: 'q' });
+    if (move === null) return 'snapback';
+
+    const uci = source + target + (move.flags.includes('p') ? 'q' : '');
+    setThinking(true);
+
+    fetch(`/api/puzzle/${puzzleId}/check`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ move: uci, move_index: moveIndex })
+    })
+    .then(r => r.json())
+    .then(data => {
+      setThinking(false);
+      if (!data.correct) {
+        // Undo the move on the client
+        game.undo();
+        board.position(game.fen());
+        setStatus('Not the best move — try again', 'wrong');
+        return;
+      }
+
+      if (data.complete && !data.opponent_move) {
+        setStatus('Puzzle solved!', 'complete');
+        puzzleActive = false;
+        refreshStats();
+        return;
+      }
+
+      // Play opponent's response
+      if (data.opponent_move) {
+        const from = data.opponent_move.slice(0, 2);
+        const to   = data.opponent_move.slice(2, 4);
+        const promo = data.opponent_move.length > 4 ? data.opponent_move[4] : undefined;
+        game.move({ from, to, promotion: promo || 'q' });
+        board.position(game.fen());
+        moveIndex = data.next_move_index || (moveIndex + 2);
+
+        if (data.complete) {
+          setStatus('Puzzle solved!', 'complete');
+          puzzleActive = false;
+          refreshStats();
+        } else {
+          setStatus('Good move! Your turn again', 'correct');
+        }
+      } else {
+        moveIndex += 1;
+        setStatus('Good move! Keep going', 'correct');
+      }
+    })
+    .catch(() => {
+      setThinking(false);
+      game.undo();
+      board.position(game.fen());
+      setStatus('Connection error');
+    });
+  }
+
+  function onSnapEnd() {
+    board.position(game.fen());
+  }
+
+  // ── Show solution ──────────────────────────────────────────────────────────
+  document.getElementById('btn-solution').addEventListener('click', () => {
+    if (!puzzleId) return;
+    puzzleActive = false;
+    fetch(`/api/puzzle/${puzzleId}/solution`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) return;
+        // Replay solution move by move with delays
+        let b = new Chess(game.fen());
+        // Reset to puzzle start — reload the puzzle FEN from board
+        // We'll animate from current position through remaining solution
+        const moves = data.solution;
+        setStatus('Solution: ' + moves.join(' → '), 'info');
+
+        // Reload puzzle position and animate full solution
+        fetch(`/api/puzzle?theme=all`)  // We need to get the FEN; store it on load
+          .catch(() => {});
+
+        // Animate remaining solution moves from current game state
+        let i = moveIndex;
+        function playNext() {
+          if (i >= moves.length) { refreshStats(); return; }
+          const uci = moves[i];
+          const from = uci.slice(0, 2);
+          const to   = uci.slice(2, 4);
+          const promo = uci.length > 4 ? uci[4] : 'q';
+          game.move({ from, to, promotion: promo });
+          board.position(game.fen());
+          i++;
+          setTimeout(playNext, 600);
+        }
+        playNext();
+      });
+  });
+
+  // ── Controls ───────────────────────────────────────────────────────────────
+  document.getElementById('btn-next').addEventListener('click', loadPuzzle);
+  document.getElementById('btn-flip').addEventListener('click', () => board.flip());
+  document.getElementById('theme-select').addEventListener('change', loadPuzzle);
+
+  document.getElementById('btn-generate').addEventListener('click', () => {
+    const btn = document.getElementById('btn-generate');
+    const genStatus = document.getElementById('gen-status');
+    btn.disabled = true;
+    genStatus.textContent = 'Generating...';
+    fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ n: 20 })
+    })
+    .then(r => r.json())
+    .then(d => {
+      genStatus.textContent = `+${d.generated} puzzles (${d.total} total)`;
+      btn.disabled = false;
+      loadThemes();
+      refreshStats();
+    })
+    .catch(() => {
+      genStatus.textContent = 'Error';
+      btn.disabled = false;
+    });
+  });
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  game = new Chess();
+  board = Chessboard('board', {
+    draggable: true,
+    position: 'start',
+    onDragStart,
+    onDrop,
+    onSnapEnd,
+    pieceTheme: 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/img/chesspieces/wikipedia/{piece}.png'
+  });
+
+  $(window).resize(() => board.resize());
+  loadThemes();
+  loadPuzzle();
+</script>
+</body>
+</html>

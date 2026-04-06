@@ -17,7 +17,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 18px;
+      gap: 14px;
       padding: 24px;
     }
 
@@ -31,16 +31,65 @@
     #board-wrap { position: relative; }
     #board { width: min(480px, 90vw); }
 
+    /* ── Status ── */
     #status {
       font-size: 0.95rem;
       color: #aaa;
       min-height: 22px;
       text-align: center;
     }
-
     #status.check  { color: #f0a500; font-weight: bold; }
     #status.over   { color: #e94560; font-weight: bold; }
 
+    /* ── Material bar ── */
+    #material {
+      width: min(480px, 90vw);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.8rem;
+      color: #888;
+    }
+    #mat-bar-wrap {
+      flex: 1;
+      height: 6px;
+      background: #2a2a3e;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    #mat-bar {
+      height: 100%;
+      background: #e0e0e0;
+      border-radius: 3px;
+      transition: width 0.3s ease;
+      width: 50%;
+    }
+    #mat-white { text-align: right; min-width: 30px; }
+    #mat-black { min-width: 30px; }
+
+    /* ── Thinking bar ── */
+    #thinking-bar {
+      width: min(480px, 90vw);
+      height: 3px;
+      background: #2a2a3e;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    #thinking-fill {
+      height: 100%;
+      width: 0%;
+      background: #e94560;
+    }
+    #thinking-bar.active #thinking-fill {
+      animation: thinking 1.2s ease-in-out infinite;
+    }
+    @keyframes thinking {
+      0%   { width: 0%; margin-left: 0; }
+      50%  { width: 60%; margin-left: 20%; }
+      100% { width: 0%; margin-left: 100%; }
+    }
+
+    /* ── Controls ── */
     #controls {
       display: flex;
       gap: 10px;
@@ -72,38 +121,44 @@
       cursor: pointer;
     }
 
-    #thinking-bar {
+    /* ── Move history ── */
+    #move-history {
       width: min(480px, 90vw);
-      height: 3px;
-      background: #2a2a3e;
-      border-radius: 2px;
-      overflow: hidden;
-    }
-    #thinking-fill {
-      height: 100%;
-      width: 0%;
-      background: #e94560;
-      transition: width 0.1s;
-    }
-    #thinking-bar.active #thinking-fill {
-      animation: thinking 1.2s ease-in-out infinite;
-    }
-    @keyframes thinking {
-      0%   { width: 0%; margin-left: 0; }
-      50%  { width: 60%; margin-left: 20%; }
-      100% { width: 0%; margin-left: 100%; }
+      max-height: 80px;
+      overflow-y: auto;
+      font-size: 0.78rem;
+      color: #666;
+      text-align: center;
+      line-height: 1.8;
+      scrollbar-width: thin;
     }
   </style>
 </head>
 <body>
 
   <h1>Chess Engine</h1>
+
   <div id="status">Your turn — play as White</div>
   <div id="thinking-bar"><div id="thinking-fill"></div></div>
   <div id="board"></div>
+
+  <!-- Material balance -->
+  <div id="material">
+    <span id="mat-white">39</span>
+    <div id="mat-bar-wrap"><div id="mat-bar"></div></div>
+    <span id="mat-black">39</span>
+  </div>
+
+  <!-- Move history -->
+  <div id="move-history"></div>
+
   <div id="controls">
     <button id="btn-new">New Game</button>
     <button id="btn-flip">Flip Board</button>
+    <select id="color-select">
+      <option value="white">Play as White</option>
+      <option value="black">Play as Black</option>
+    </select>
     <select id="depth">
       <option value="2">Easy (depth 2)</option>
       <option value="3" selected>Medium (depth 3)</option>
@@ -117,9 +172,15 @@
   <script>
     const game = new Chess();
     let board, thinking = false;
+    let playerColor = 'white';   // which side the human plays
+    let moveHistory = [];
 
-    const statusEl = document.getElementById('status');
-    const thinkingBar = document.getElementById('thinking-bar');
+    const statusEl   = document.getElementById('status');
+    const thinkBar   = document.getElementById('thinking-bar');
+    const historyEl  = document.getElementById('move-history');
+    const matBar     = document.getElementById('mat-bar');
+    const matWhite   = document.getElementById('mat-white');
+    const matBlack   = document.getElementById('mat-black');
 
     function setStatus(msg, cls = '') {
       statusEl.textContent = msg;
@@ -128,17 +189,41 @@
 
     function setThinking(active) {
       thinking = active;
-      thinkingBar.classList.toggle('active', active);
+      thinkBar.classList.toggle('active', active);
+    }
+
+    function updateMaterial(mat) {
+      if (!mat) return;
+      const w = mat.white, b = mat.black, total = w + b || 1;
+      matWhite.textContent = w;
+      matBlack.textContent = b;
+      matBar.style.width = (w / total * 100) + '%';
+    }
+
+    function pushHistory(san) {
+      moveHistory.push(san);
+      const pairs = [];
+      for (let i = 0; i < moveHistory.length; i += 2) {
+        const n = Math.floor(i / 2) + 1;
+        pairs.push(`${n}. ${moveHistory[i]}${moveHistory[i+1] ? ' ' + moveHistory[i+1] : ''}`);
+      }
+      historyEl.textContent = pairs.join('  ');
+      historyEl.scrollTop = historyEl.scrollHeight;
+    }
+
+    function isPlayerTurn() {
+      const whiteTurn = game.turn() === 'w';
+      return (playerColor === 'white') === whiteTurn;
     }
 
     function onDragStart(source, piece) {
       if (thinking || game.game_over()) return false;
-      // Player is always white
-      if (piece.startsWith('b')) return false;
+      if (!isPlayerTurn()) return false;
+      if (playerColor === 'white' && piece.startsWith('b')) return false;
+      if (playerColor === 'black' && piece.startsWith('w')) return false;
     }
 
     function onDrop(source, target) {
-      // Try the move client-side first for instant feedback
       const move = game.move({ from: source, to: target, promotion: 'q' });
       if (move === null) return 'snapback';
 
@@ -146,11 +231,12 @@
       setStatus('Engine thinking...');
 
       const depth = parseInt(document.getElementById('depth').value);
+      const uci = source + target + (move.flags.includes('p') ? 'q' : '');
 
       fetch('/move', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ move: source + target + (move.flags.includes('p') ? 'q' : ''), depth })
+        body: JSON.stringify({ move: uci, depth })
       })
       .then(r => r.json())
       .then(data => {
@@ -162,16 +248,29 @@
           return;
         }
 
-        game.load(data.fen);
+        // Record player's move in history
+        pushHistory(move.san);
+
+        // Apply engine's response move to local game state
+        if (data.engine_move) {
+          const from = data.engine_move.slice(0, 2);
+          const to   = data.engine_move.slice(2, 4);
+          const promo = data.engine_move.length > 4 ? data.engine_move[4] : undefined;
+          const em = game.move({ from, to, promotion: promo || 'q' });
+          if (em) pushHistory(em.san);
+        }
+
         board.position(data.fen);
+        updateMaterial(data.material);
         setThinking(false);
 
         if (data.game_over) {
           setStatus(data.result, 'over');
         } else if (data.in_check) {
+          const side = playerColor === 'white' ? 'Your' : "Opponent's";
           setStatus('Check! Your turn', 'check');
         } else {
-          setStatus('Your turn — play as White');
+          setStatus('Your turn');
         }
       })
       .catch(() => {
@@ -186,6 +285,39 @@
       board.position(game.fen());
     }
 
+    function startNewGame() {
+      playerColor = document.getElementById('color-select').value;
+      moveHistory = [];
+      historyEl.textContent = '';
+      const depth = parseInt(document.getElementById('depth').value);
+
+      fetch('/new', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ player_color: playerColor, depth })
+      })
+      .then(r => r.json())
+      .then(data => {
+        game.load(data.fen);
+        board.orientation(playerColor);
+        board.position(data.fen);
+        setThinking(false);
+        updateMaterial({ white: 39, black: 39, advantage: 0 });
+
+        if (data.engine_move) {
+          // Engine already played its first move (player chose black)
+          const from = data.engine_move.slice(0, 2);
+          const to   = data.engine_move.slice(2, 4);
+          const em = new Chess(chess.STARTING_FEN);  // starting position before engine move
+          // We already have the FEN from server; just record in history
+          pushHistory(data.engine_move);  // approximate — SAN not available here
+          setStatus('Your turn — play as Black');
+        } else {
+          setStatus(`New game — your turn as ${playerColor === 'white' ? 'White' : 'Black'}`);
+        }
+      });
+    }
+
     board = Chessboard('board', {
       draggable: true,
       position: 'start',
@@ -195,19 +327,8 @@
       pieceTheme: 'https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/img/chesspieces/wikipedia/{piece}.png'
     });
 
-    document.getElementById('btn-new').addEventListener('click', () => {
-      fetch('/new', { method: 'POST' })
-        .then(r => r.json())
-        .then(() => {
-          game.reset();
-          board.start();
-          setThinking(false);
-          setStatus('New game — your turn as White');
-        });
-    });
-
+    document.getElementById('btn-new').addEventListener('click', startNewGame);
     document.getElementById('btn-flip').addEventListener('click', () => board.flip());
-
     $(window).resize(() => board.resize());
   </script>
 </body>

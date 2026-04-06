@@ -5,4 +5,7 @@ __pycache__/
 venv/
 .venv/
 chess-analyser/data/
+chess-puzzle-generator/data/
 *.db
+.pytest_cache/
+
