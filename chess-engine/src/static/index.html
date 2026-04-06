@@ -305,12 +305,7 @@
         updateMaterial({ white: 39, black: 39, advantage: 0 });
 
         if (data.engine_move) {
-          // Engine already played its first move (player chose black)
-          const from = data.engine_move.slice(0, 2);
-          const to   = data.engine_move.slice(2, 4);
-          const em = new Chess(chess.STARTING_FEN);  // starting position before engine move
-          // We already have the FEN from server; just record in history
-          pushHistory(data.engine_move);  // approximate — SAN not available here
+          pushHistory(data.engine_move);
           setStatus('Your turn — play as Black');
         } else {
           setStatus(`New game — your turn as ${playerColor === 'white' ? 'White' : 'Black'}`);

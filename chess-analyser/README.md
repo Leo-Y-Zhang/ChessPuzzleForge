@@ -28,12 +28,12 @@ Lightweight backend, minimal frontend dependency. Keeps the stack simple enough 
 pip install -r requirements.txt
 
 # Fetch your games (run once, then cached)
-python src/fetch.py --username YOUR_USERNAME --platform lichess
+python src/fetch.py lichess YOUR_USERNAME
 
 # Start the dashboard
 python src/app.py
 
-# Open http://localhost:5000
+# Open http://localhost:5001
 ```
 
 ## Project structure

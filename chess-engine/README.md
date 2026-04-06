@@ -51,9 +51,8 @@ chess-engine/
 
 ## What I'd improve next
 
-- Add an opening book (precomputed best opening moves)
-- Improve the evaluation function with piece-square tables
-- Add difficulty levels by limiting search depth
+- Add an opening book (precomputed best opening moves for the first ~10 moves)
+- Add an endgame table for common K+R vs K, K+Q vs K positions
 
 ## What I learned
 

@@ -276,6 +276,7 @@
   // ── State ──────────────────────────────────────────────────────────────────
   let board, game;
   let puzzleId = null;
+  let puzzleFen = null;   // starting FEN for the current puzzle
   let moveIndex = 0;
   let puzzleActive = false;
 
@@ -342,6 +343,7 @@
           return;
         }
         puzzleId  = data.id;
+        puzzleFen = data.fen;
         moveIndex = 0;
         puzzleActive = true;
 
@@ -440,37 +442,29 @@
 
   // ── Show solution ──────────────────────────────────────────────────────────
   document.getElementById('btn-solution').addEventListener('click', () => {
-    if (!puzzleId) return;
+    if (!puzzleId || !puzzleFen) return;
     puzzleActive = false;
     fetch(`/api/puzzle/${puzzleId}/solution`)
       .then(r => r.json())
       .then(data => {
         if (data.error) return;
-        // Replay solution move by move with delays
-        let b = new Chess(game.fen());
-        // Reset to puzzle start — reload the puzzle FEN from board
-        // We'll animate from current position through remaining solution
         const moves = data.solution;
         setStatus('Solution: ' + moves.join(' → '), 'info');
 
-        // Reload puzzle position and animate full solution
-        fetch(`/api/puzzle?theme=all`)  // We need to get the FEN; store it on load
-          .catch(() => {});
+        // Reset to puzzle start then animate the full solution from the beginning
+        game = new Chess(puzzleFen);
+        board.position(puzzleFen);
 
-        // Animate remaining solution moves from current game state
-        let i = moveIndex;
+        let i = 0;
         function playNext() {
           if (i >= moves.length) { refreshStats(); return; }
           const uci = moves[i];
-          const from = uci.slice(0, 2);
-          const to   = uci.slice(2, 4);
-          const promo = uci.length > 4 ? uci[4] : 'q';
-          game.move({ from, to, promotion: promo });
+          game.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] || 'q' });
           board.position(game.fen());
           i++;
-          setTimeout(playNext, 600);
+          setTimeout(playNext, 700);
         }
-        playNext();
+        setTimeout(playNext, 400);  // brief pause before starting
       });
   });
 
