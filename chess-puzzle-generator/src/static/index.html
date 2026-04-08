@@ -5,12 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chess Puzzle Trainer</title>
   <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: system-ui, -apple-system, sans-serif;
-      background: #0f0f1a;
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #0b0b14;
       color: #e0e0e0;
       min-height: 100vh;
       display: flex;
@@ -20,11 +21,23 @@
       gap: 20px;
     }
 
+    /* App header */
+    .app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 900px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
     h1 {
-      font-size: 1.3rem;
-      letter-spacing: 4px;
+      font-size: 1.05rem;
+      letter-spacing: 5px;
       color: #fff;
       text-transform: uppercase;
+      font-weight: 700;
     }
 
     /* ── Layout ── */
@@ -101,18 +114,19 @@
     }
 
     .card {
-      background: #1a1a2e;
-      border: 1px solid #2a2a40;
-      border-radius: 10px;
+      background: #141420;
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 12px;
       padding: 16px 18px;
     }
 
     .card h2 {
-      font-size: 0.72rem;
+      font-size: 0.68rem;
       text-transform: uppercase;
       letter-spacing: 1.5px;
-      color: #888;
+      color: #555;
       margin-bottom: 10px;
+      font-weight: 700;
     }
 
     /* Theme badge */
@@ -174,13 +188,19 @@
       padding: 7px 14px;
       font-size: 0.8rem;
     }
-    #gen-status { font-size: 0.78rem; color: #888; }
+    #gen-status { font-size: 0.78rem; color: #555; font-family: 'JetBrains Mono', monospace; }
+
+    .puzzle-meta { font-size: 0.85rem; color: #aaa; line-height: 2; }
+    .puzzle-meta span { color: #fff; font-weight: 600; }
+
+    .stat-val  { font-size: 1.4rem; font-weight: 700; color: #fff; font-family: 'JetBrains Mono', monospace; }
+    .stat-lbl  { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 1px; color: #555; }
 
     /* Thinking bar */
     #thinking-bar {
       width: min(480px, 90vw);
       height: 3px;
-      background: #2a2a3e;
+      background: #1e1e2e;
       border-radius: 2px;
       overflow: hidden;
     }
@@ -194,12 +214,27 @@
       100% { width: 0%;  margin-left: 100%; }
     }
 
+    button {
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+    }
+
+    select {
+      font-family: 'Inter', sans-serif;
+      background: #141420;
+      color: #ccc;
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+
     @media (max-width: 600px) { .info-col { max-width: 100%; width: 100%; } }
   </style>
 </head>
 <body>
 
-<h1>Puzzle Trainer</h1>
+<div class="app-header">
+  <h1>Puzzle Trainer</h1>
+  <span style="font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:#e94560;border:1px solid rgba(233,69,96,0.3);padding:3px 10px;border-radius:20px;letter-spacing:1px;">TACTICS</span>
+</div>
 
 <div class="layout">
 

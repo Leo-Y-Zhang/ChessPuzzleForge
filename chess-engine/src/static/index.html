@@ -5,41 +5,103 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chess Engine</title>
   <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: system-ui, -apple-system, sans-serif;
-      background: #0f0f1a;
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #0b0b14;
       color: #e0e0e0;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      gap: 14px;
-      padding: 24px;
+      padding: 24px 16px;
     }
 
+    /* ── Header ── */
+    .app-header {
+      width: 100%;
+      max-width: 860px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
     h1 {
-      font-size: 1.4rem;
-      letter-spacing: 4px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 5px;
       color: #ffffff;
       text-transform: uppercase;
+    }
+    .header-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      color: #e94560;
+      border: 1px solid rgba(233,69,96,0.3);
+      padding: 3px 10px;
+      border-radius: 20px;
+      letter-spacing: 1px;
+    }
+
+    /* ── Main layout ── */
+    .main-layout {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      width: 100%;
+      max-width: 860px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    /* ── Board column ── */
+    .board-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
     }
 
     #board-wrap { position: relative; }
     #board { width: min(480px, 90vw); }
 
+    /* ── Player name bars (above/below board) ── */
+    .player-bar {
+      width: min(480px, 90vw);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: #141420;
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 8px;
+      font-size: 0.85rem;
+    }
+    .player-name { font-weight: 600; color: #fff; display: flex; align-items: center; gap: 8px; }
+    .player-pieces { font-size: 1rem; letter-spacing: 1px; color: #aaa; }
+    .player-material { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: #888; }
+
     /* ── Status ── */
     #status {
-      font-size: 0.95rem;
-      color: #aaa;
+      width: min(480px, 90vw);
+      font-size: 0.88rem;
+      color: #888;
       min-height: 22px;
       text-align: center;
+      padding: 6px;
+      background: #141420;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.06);
+      font-family: 'JetBrains Mono', monospace;
     }
-    #status.check  { color: #f0a500; font-weight: bold; }
-    #status.over   { color: #e94560; font-weight: bold; }
+    #status.check  { color: #f0a500; font-weight: 600; border-color: rgba(240,165,0,0.3); }
+    #status.over   { color: #e94560; font-weight: 600; border-color: rgba(233,69,96,0.3); }
 
     /* ── Material bar ── */
     #material {
@@ -47,31 +109,32 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       color: #888;
+      font-family: 'JetBrains Mono', monospace;
     }
     #mat-bar-wrap {
       flex: 1;
-      height: 6px;
-      background: #2a2a3e;
+      height: 5px;
+      background: #1e1e2e;
       border-radius: 3px;
       overflow: hidden;
     }
     #mat-bar {
       height: 100%;
-      background: #e0e0e0;
+      background: linear-gradient(90deg, #e94560, #e0e0e0);
       border-radius: 3px;
-      transition: width 0.3s ease;
+      transition: width 0.4s ease;
       width: 50%;
     }
-    #mat-white { text-align: right; min-width: 30px; }
-    #mat-black { min-width: 30px; }
+    #mat-white { text-align: right; min-width: 28px; }
+    #mat-black { min-width: 28px; }
 
     /* ── Thinking bar ── */
     #thinking-bar {
       width: min(480px, 90vw);
       height: 3px;
-      background: #2a2a3e;
+      background: #1e1e2e;
       border-radius: 2px;
       overflow: hidden;
     }
@@ -92,78 +155,164 @@
     /* ── Controls ── */
     #controls {
       display: flex;
-      gap: 10px;
+      gap: 8px;
       flex-wrap: wrap;
       justify-content: center;
     }
 
     button {
-      padding: 9px 22px;
+      padding: 9px 20px;
       border: none;
       border-radius: 6px;
       cursor: pointer;
-      font-size: 0.88rem;
+      font-size: 0.82rem;
       font-weight: 600;
-      transition: opacity 0.15s;
+      transition: opacity 0.15s, transform 0.1s;
+      font-family: 'Inter', sans-serif;
     }
     button:hover { opacity: 0.85; }
+    button:active { transform: scale(0.97); }
 
     #btn-new  { background: #e94560; color: #fff; }
-    #btn-flip { background: #2a2a3e; color: #ccc; border: 1px solid #444; }
+    #btn-flip { background: #1e1e2e; color: #ccc; border: 1px solid #333; }
 
     select {
       padding: 9px 14px;
       border-radius: 6px;
-      background: #2a2a3e;
+      background: #1e1e2e;
       color: #ccc;
-      border: 1px solid #444;
-      font-size: 0.88rem;
+      border: 1px solid #333;
+      font-size: 0.82rem;
       cursor: pointer;
+      font-family: 'Inter', sans-serif;
     }
 
-    /* ── Move history ── */
-    #move-history {
-      width: min(480px, 90vw);
-      max-height: 80px;
+    /* ── Side panel (move history + controls) ── */
+    .side-panel {
+      flex: 1;
+      min-width: 200px;
+      max-width: 300px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .side-card {
+      background: #141420;
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 10px;
+      padding: 14px;
+    }
+    .side-card-title {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #555;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+
+    /* ── Move history table ── */
+    #move-history-table {
+      width: 100%;
+      max-height: 320px;
       overflow-y: auto;
-      font-size: 0.78rem;
-      color: #666;
-      text-align: center;
-      line-height: 1.8;
       scrollbar-width: thin;
+      scrollbar-color: #333 transparent;
+    }
+    .mv-row {
+      display: grid;
+      grid-template-columns: 28px 1fr 1fr;
+      gap: 4px;
+      align-items: center;
+      padding: 3px 0;
+      border-radius: 4px;
+      font-size: 0.82rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .mv-row:nth-child(even) { background: rgba(255,255,255,0.03); }
+    .mv-num { color: #444; font-size: 0.72rem; text-align: right; padding-right: 6px; }
+    .mv-w { color: #e0e0e0; padding: 2px 6px; border-radius: 3px; cursor: default; }
+    .mv-b { color: #aaa; padding: 2px 6px; border-radius: 3px; cursor: default; }
+    .mv-w:hover, .mv-b:hover { background: rgba(233,69,96,0.1); color: #e94560; }
+    .mv-latest { color: #e94560; font-weight: 600; }
+
+    /* Eval bar */
+    .eval-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      color: #666;
+    }
+    .eval-bar-track {
+      flex: 1;
+      height: 4px;
+      background: #1e1e2e;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .eval-bar-fill {
+      height: 100%;
+      background: #e0e0e0;
+      border-radius: 2px;
+      transition: width 0.4s ease;
+      width: 50%;
     }
   </style>
 </head>
 <body>
 
-  <h1>Chess Engine</h1>
-
-  <div id="status">Your turn — play as White</div>
-  <div id="thinking-bar"><div id="thinking-fill"></div></div>
-  <div id="board"></div>
-
-  <!-- Material balance -->
-  <div id="material">
-    <span id="mat-white">39</span>
-    <div id="mat-bar-wrap"><div id="mat-bar"></div></div>
-    <span id="mat-black">39</span>
+  <div class="app-header">
+    <h1>Chess Engine</h1>
+    <span class="header-badge">vs AI</span>
   </div>
 
-  <!-- Move history -->
-  <div id="move-history"></div>
+  <div class="main-layout">
+    <!-- Board column -->
+    <div class="board-col">
+      <div class="player-bar" id="bar-black">
+        <div class="player-name">
+          <span>&#9820;</span> Engine (Black)
+        </div>
+        <span class="player-material" id="black-adv"></span>
+      </div>
+      <div id="thinking-bar"><div id="thinking-fill"></div></div>
+      <div id="board-wrap"><div id="board"></div></div>
+      <div class="player-bar" id="bar-white">
+        <div class="player-name">
+          <span style="color:#fff">&#9814;</span> You (White)
+        </div>
+        <span class="player-material" id="white-adv"></span>
+      </div>
+      <div id="status">Your turn — play as White</div>
+      <div id="material">
+        <span id="mat-white">39</span>
+        <div id="mat-bar-wrap"><div id="mat-bar"></div></div>
+        <span id="mat-black">39</span>
+      </div>
+      <div id="controls">
+        <button id="btn-new">New Game</button>
+        <button id="btn-flip">Flip Board</button>
+        <select id="color-select">
+          <option value="white">Play as White</option>
+          <option value="black">Play as Black</option>
+        </select>
+        <select id="depth">
+          <option value="2">Easy</option>
+          <option value="3" selected>Medium</option>
+          <option value="4">Hard</option>
+        </select>
+      </div>
+    </div>
 
-  <div id="controls">
-    <button id="btn-new">New Game</button>
-    <button id="btn-flip">Flip Board</button>
-    <select id="color-select">
-      <option value="white">Play as White</option>
-      <option value="black">Play as Black</option>
-    </select>
-    <select id="depth">
-      <option value="2">Easy (depth 2)</option>
-      <option value="3" selected>Medium (depth 3)</option>
-      <option value="4">Hard (depth 4)</option>
-    </select>
+    <!-- Side panel -->
+    <div class="side-panel">
+      <div class="side-card">
+        <div class="side-card-title">Move History</div>
+        <div id="move-history-table"></div>
+      </div>
+    </div>
   </div>
 
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -177,7 +326,7 @@
 
     const statusEl   = document.getElementById('status');
     const thinkBar   = document.getElementById('thinking-bar');
-    const historyEl  = document.getElementById('move-history');
+    const historyEl  = document.getElementById('move-history-table');
     const matBar     = document.getElementById('mat-bar');
     const matWhite   = document.getElementById('mat-white');
     const matBlack   = document.getElementById('mat-black');
@@ -202,12 +351,27 @@
 
     function pushHistory(san) {
       moveHistory.push(san);
-      const pairs = [];
+      historyEl.textContent = '';
       for (let i = 0; i < moveHistory.length; i += 2) {
         const n = Math.floor(i / 2) + 1;
-        pairs.push(`${n}. ${moveHistory[i]}${moveHistory[i+1] ? ' ' + moveHistory[i+1] : ''}`);
+        const row = document.createElement('div');
+        row.className = 'mv-row';
+        const numEl = document.createElement('span');
+        numEl.className = 'mv-num';
+        numEl.textContent = n + '.';
+        row.appendChild(numEl);
+        const wEl = document.createElement('span');
+        const isLatestW = (i === moveHistory.length - 1);
+        wEl.className = 'mv-w' + (isLatestW ? ' mv-latest' : '');
+        wEl.textContent = moveHistory[i] || '';
+        row.appendChild(wEl);
+        const bEl = document.createElement('span');
+        const isLatestB = (i + 1 === moveHistory.length - 1);
+        bEl.className = 'mv-b' + (isLatestB ? ' mv-latest' : '');
+        bEl.textContent = moveHistory[i + 1] || '';
+        row.appendChild(bEl);
+        historyEl.appendChild(row);
       }
-      historyEl.textContent = pairs.join('  ');
       historyEl.scrollTop = historyEl.scrollHeight;
     }
 
@@ -288,7 +452,7 @@
     function startNewGame() {
       playerColor = document.getElementById('color-select').value;
       moveHistory = [];
-      historyEl.textContent = '';
+      while (historyEl.firstChild) historyEl.removeChild(historyEl.firstChild);
       const depth = parseInt(document.getElementById('depth').value);
 
       fetch('/new', {
