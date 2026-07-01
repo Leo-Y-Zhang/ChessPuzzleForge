@@ -10,9 +10,12 @@ from __future__ import annotations
 
 import pytest
 
-chess = pytest.importorskip("chess")
+# Pass ``exc_type=ImportError`` so pytest skips cleanly when the optional
+# ``python-chess`` package is simply absent, without the default (soon-to-be
+# error in pytest 9.1) PytestDeprecationWarning about catching ImportError.
+chess = pytest.importorskip("chess", exc_type=ImportError)
 
-from chesspuzzle.engine import Board
+from chesspuzzle.engine import Board, move_to_san
 from chesspuzzle.fen_bank import PUZZLES
 
 REFERENCE_FENS = [p["fen"] for p in PUZZLES] + [
@@ -28,6 +31,18 @@ def test_legal_moves_match_reference(fen):
     mine = sorted(m.uci() for m in Board.from_fen(fen).legal_moves())
     theirs = sorted(m.uci() for m in chess.Board(fen).legal_moves)
     assert mine == theirs
+
+
+@pytest.mark.parametrize("fen", REFERENCE_FENS)
+def test_san_matches_reference_for_every_legal_move(fen):
+    ref = chess.Board(fen)
+    ref_san_by_uci = {m.uci(): ref.san(m) for m in ref.legal_moves}
+    for move in Board.from_fen(fen).legal_moves():
+        mine = move_to_san(Board.from_fen(fen), move)
+        assert mine == ref_san_by_uci[move.uci()], (
+            f"SAN mismatch in {fen} for {move.uci()}: "
+            f"mine={mine!r} ref={ref_san_by_uci[move.uci()]!r}"
+        )
 
 
 @pytest.mark.parametrize("fen", REFERENCE_FENS)

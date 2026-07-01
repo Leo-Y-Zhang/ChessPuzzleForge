@@ -18,19 +18,19 @@ from __future__ import annotations
 import random
 from typing import Dict, List, Optional
 
-from .engine import Board, forced_mate_move
+from .engine import Board, forced_mate_move, move_to_san
 from .fen_bank import all_puzzles, puzzles_by_goal
 from .verifier import verify_puzzle
 
 
+def _mate_in_1_moves(board: Board) -> List:
+    """Return the :class:`Move` objects delivering immediate mate in ``board``."""
+    return [m for m in board.legal_moves() if board.push(m).is_checkmate()]
+
+
 def derive_mate_in_1(fen: str) -> List[str]:
     """Return every move (UCI) that delivers immediate checkmate in ``fen``."""
-    board = Board.from_fen(fen)
-    mates = []
-    for move in board.legal_moves():
-        if board.push(move).is_checkmate():
-            mates.append(move.uci())
-    return mates
+    return [m.uci() for m in _mate_in_1_moves(Board.from_fen(fen))]
 
 
 def derive_mate_in_2(fen: str) -> Optional[str]:
@@ -41,17 +41,20 @@ def derive_mate_in_2(fen: str) -> Optional[str]:
 def make_puzzle_from_position(fen: str, puzzle_id: str = "derived") -> Optional[Dict]:
     """Build a mate-in-1 puzzle by deriving the solution from a raw position.
 
-    Returns None if the position has no mate in one.
+    Returns None if the position has no mate in one.  The ``san`` field carries
+    human-readable SAN for the mating move(s) (e.g. ``Ra8#``), while ``solution``
+    keeps the machine-friendly UCI form.
     """
-    mates = derive_mate_in_1(fen)
+    board = Board.from_fen(fen)
+    mates = _mate_in_1_moves(board)
     if not mates:
         return None
     return {
         "id": puzzle_id,
         "fen": fen,
         "goal": "mate_in_1",
-        "solution": mates,
-        "san": mates[0],
+        "solution": [m.uci() for m in mates],
+        "san": ", ".join(move_to_san(board, m) for m in mates),
         "theme": "derived mate-in-one",
     }
 

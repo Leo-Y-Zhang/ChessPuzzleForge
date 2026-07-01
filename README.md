@@ -121,13 +121,15 @@ cd "chess-puzzle-generator"
 python -m pytest -q
 ```
 
-Latest local run: **91 passed** (all cross-checks included, `python-chess`
+Latest local run: **109 passed** (all cross-checks included, `python-chess`
 installed).
 
 - Core-only (no third-party libs at all):
-  `python -m pytest -q --ignore=tests/test_with_chess.py` → **57 passed**.
+  `python -m pytest -q --ignore=tests/test_with_chess.py` → **62 passed**.
 - When `python-chess` is absent, `tests/test_with_chess.py` reports
-  **1 skipped** instead of failing (it uses `pytest.importorskip`).
+  **1 skipped** instead of failing (it uses
+  `pytest.importorskip("chess", exc_type=ImportError)`, which also keeps the
+  run free of the pytest 9.1 deprecation warning).
 
 ## Architecture note
 

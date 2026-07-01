@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from typing import Dict, Optional, Tuple
 
-from .engine import Board, forced_mate_move, move_from_uci, piece_color
+from .engine import Board, forced_mate_move, move_from_uci
 
 # Standard material values in pawns; the king is never captured so it is 0.
 PIECE_VALUES = {"P": 1.0, "N": 3.0, "B": 3.0, "R": 5.0, "Q": 9.0, "K": 0.0}

@@ -41,6 +41,23 @@ def test_make_puzzle_from_position_none_when_no_mate():
     assert make_puzzle_from_position("8/8/8/8/8/8/8/k6K w - - 0 1") is None
 
 
+def test_derived_puzzle_renders_san_with_mate_marker():
+    # Regression: the derived mate-in-1 must display SAN (Ra8#), like the bank
+    # puzzles, rather than the raw UCI (a1a8).
+    puzzle = make_puzzle_from_position("6k1/5ppp/8/8/8/8/8/R6K w - - 0 1")
+    assert puzzle is not None
+    assert puzzle["san"] == "Ra8#"
+    shown = render_puzzle(puzzle, reveal=True)
+    assert "Solution: Ra8#" in shown
+    assert "#" in shown  # the mate marker is present
+    assert "a1a8" in shown  # UCI is still shown as a helpful cross-reference
+
+
+def test_make_puzzle_from_position_rejects_invalid_fen():
+    with pytest.raises(ValueError):
+        make_puzzle_from_position("this is not a fen")
+
+
 def test_generate_puzzle_is_validated():
     puzzle = generate_puzzle(seed=1)
     ok, msg = verify_puzzle(puzzle)

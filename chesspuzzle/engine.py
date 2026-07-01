@@ -342,7 +342,6 @@ class Board:
         opponent = BLACK if color == WHITE else WHITE
         pieces = self.squares
         if color == WHITE:
-            rank = 0
             king_from = square(4, 0)
             if pieces[king_from] != "K":
                 return
@@ -361,7 +360,6 @@ class Board:
                 ):
                     yield Move(king_from, square(2, 0), is_castle=True)
         else:
-            rank = 7
             king_from = square(4, 7)
             if pieces[king_from] != "k":
                 return
@@ -509,6 +507,70 @@ def move_from_uci(board: Board, uci: str) -> Move:
         if move.from_sq == from_sq and move.to_sq == to_sq and move.promotion == promotion:
             return move
     raise ValueError(f"illegal move {uci!r} in position {board.to_fen()!r}")
+
+
+def move_to_san(board: Board, move: Move) -> str:
+    """Return the Standard Algebraic Notation (SAN) for ``move`` in ``board``.
+
+    ``move`` must be legal in ``board``.  The result mirrors the conventions of
+    mature engines (e.g. ``Ra8#``, ``exd6``, ``a8=Q+``, ``O-O-O``): a piece
+    letter (omitted for pawns), the minimal file/rank disambiguation when more
+    than one identical piece can reach the target, an ``x`` for captures, the
+    destination square, a promotion suffix, and a trailing ``+`` for check or
+    ``#`` for checkmate.
+    """
+    piece = board.piece_at(move.from_sq)
+    if piece is None:
+        raise ValueError(f"no piece on {square_name(move.from_sq)} to move")
+    kind = piece.upper()
+
+    if move.is_castle:
+        san = "O-O" if file_of(move.to_sq) == 6 else "O-O-O"
+    else:
+        is_capture = board.piece_at(move.to_sq) is not None or move.is_ep
+        if kind == "P":
+            san = ""
+            if is_capture:
+                san += "abcdefgh"[file_of(move.from_sq)] + "x"
+            san += square_name(move.to_sq)
+            if move.promotion:
+                san += "=" + move.promotion.upper()
+        else:
+            san = kind + _san_disambiguation(board, move, piece)
+            if is_capture:
+                san += "x"
+            san += square_name(move.to_sq)
+
+    child = board.push(move)
+    if child.is_checkmate():
+        san += "#"
+    elif child.is_check():
+        san += "+"
+    return san
+
+
+def _san_disambiguation(board: Board, move: Move, piece: str) -> str:
+    """Return the minimal file/rank hint needed to disambiguate ``move``.
+
+    Considers only *legal* moves of the same piece type/colour that also land on
+    ``move.to_sq`` from a different origin, matching standard SAN rules.
+    """
+    others = [
+        m.from_sq
+        for m in board.legal_moves()
+        if m.to_sq == move.to_sq
+        and m.from_sq != move.from_sq
+        and board.piece_at(m.from_sq) == piece
+    ]
+    if not others:
+        return ""
+    same_file = any(file_of(sq) == file_of(move.from_sq) for sq in others)
+    same_rank = any(rank_of(sq) == rank_of(move.from_sq) for sq in others)
+    if not same_file:
+        return "abcdefgh"[file_of(move.from_sq)]
+    if not same_rank:
+        return str(rank_of(move.from_sq) + 1)
+    return square_name(move.from_sq)
 
 
 def forced_mate_move(board: Board, depth: int) -> Optional[str]:

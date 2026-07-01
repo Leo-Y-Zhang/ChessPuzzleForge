@@ -5,9 +5,15 @@ from __future__ import annotations
 from chesspuzzle.engine import (
     Board,
     move_from_uci,
+    move_to_san,
     parse_square,
     square_name,
 )
+
+
+def san(fen, uci):
+    board = Board.from_fen(fen)
+    return move_to_san(board, move_from_uci(board, uci))
 
 
 def uci_set(fen):
@@ -84,6 +90,26 @@ def test_move_from_uci_rejects_illegal():
         raise AssertionError("a1b3 should be illegal")
     except ValueError:
         pass
+
+
+def test_move_to_san_renders_mate_capture_castle_promotion():
+    # Checkmate marker.
+    assert san("6k1/5ppp/8/8/8/8/8/R6K w - - 0 1", "a1a8") == "Ra8#"
+    # Capture.
+    assert san("6k1/5ppp/3q4/8/8/8/5PPP/3R2K1 w - - 0 1", "d1d6") == "Rxd6"
+    # Castling (both sides).
+    assert san("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1", "e1g1") == "O-O"
+    assert san("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1", "e1c1") == "O-O-O"
+    # Promotion, with and without a resulting check.
+    assert san("8/P7/8/8/8/8/8/k6K w - - 0 1", "a7a8n") == "a8=N"
+    assert san("8/P7/8/8/8/8/8/k6K w - - 0 1", "a7a8q") == "a8=Q+"
+    # Plain check marker.
+    assert san("4k3/8/8/8/8/8/8/4R2K w - - 0 1", "e1e7") == "Re7+"
+
+
+def test_move_to_san_disambiguates_by_file_then_rank():
+    # Four knights; two (d5, f5) can reach e3, so a file hint is required.
+    assert san("k7/8/8/3N1N2/8/3N1N2/8/K7 w - - 0 1", "d5e3") == "Nde3"
 
 
 def test_ascii_render_contains_pieces_and_border():

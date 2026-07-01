@@ -41,7 +41,16 @@ def test_cli_fen_derivation(capsys):
     rc = main(["--fen", "6k1/5ppp/8/8/8/8/8/R6K w - - 0 1", "--reveal"])
     out = capsys.readouterr().out
     assert rc == 0
+    # SAN with the mate marker is the headline; UCI is still shown for reference.
+    assert "Ra8#" in out
     assert "a1a8" in out
+
+
+def test_cli_fen_invalid_returns_friendly_error(capsys):
+    rc = main(["--fen", "totally not a fen", "--reveal"])
+    err = capsys.readouterr().err
+    assert rc == 2
+    assert "Invalid FEN" in err
 
 
 def test_cli_fen_no_mate_returns_error(capsys):

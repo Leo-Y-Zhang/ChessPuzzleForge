@@ -102,7 +102,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         return _cmd_verify_all()
 
     if args.fen:
-        puzzle = make_puzzle_from_position(args.fen)
+        try:
+            puzzle = make_puzzle_from_position(args.fen)
+        except ValueError as exc:
+            print(f"Invalid FEN: {exc}", file=sys.stderr)
+            return 2
         if puzzle is None:
             print("No mate-in-1 found in that position.", file=sys.stderr)
             return 2
