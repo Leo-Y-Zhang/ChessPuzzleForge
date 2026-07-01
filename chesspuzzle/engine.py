@@ -407,10 +407,7 @@ class Board:
                 squares[square(0, r)] = None
 
         # Update castling rights.
-        castling = self.castling
-        for lost_piece, sq_ in (("K", 4), ("k", 60)):
-            pass  # handled below explicitly
-        new_castling = set(c for c in castling if c != "-")
+        new_castling = set(c for c in self.castling if c != "-")
 
         def drop(*flags: str) -> None:
             for fl in flags:
