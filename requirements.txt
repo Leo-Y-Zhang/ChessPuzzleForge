@@ -1,0 +1,18 @@
+# Chess Puzzle Generator - dependencies
+#
+# The CORE of this project (engine, puzzle bank, verifier, generator, CLI and
+# their unit tests) has ZERO third-party dependencies - it runs on the Python
+# standard library alone.
+#
+# The packages below are OPTIONAL:
+#
+#   pytest  - to run the test suite (dev-only).
+#   chess   - the "python-chess" reference library.  It is used ONLY by the
+#             optional cross-check tests (tests/test_with_chess.py), which skip
+#             themselves automatically when it is not installed.  Nothing in the
+#             shipped tool imports it.
+#
+# Install everything with:  pip install -r requirements.txt
+
+pytest>=7.0
+chess>=1.9

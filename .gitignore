@@ -1,0 +1,31 @@
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python caches / build artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Test / coverage caches
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Databases / local data
+*.db
+*.sqlite3
+
+# Node (not used, but kept per project convention)
+node_modules/
+
+# Editor / OS noise
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
