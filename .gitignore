@@ -16,6 +16,12 @@ dist/
 .coverage
 htmlcov/
 
+# Secrets / credentials (defensive - none should ever exist here)
+.env
+.env.*
+*.pem
+*.key
+
 # Databases / local data
 *.db
 *.sqlite
