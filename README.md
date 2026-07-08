@@ -1,90 +1,60 @@
-# Palamedes - Chess Puzzle Generator
+# Palamedes - engine-verified chess puzzle generator (pure Python, zero deps)
 
-A small, fully offline chess puzzle generator and verifier written in pure
-Python. It produces and **proves** the answers to puzzles:
+[![CI](https://github.com/GreenPandaTech/Palamedes/actions/workflows/ci.yml/badge.svg)](https://github.com/GreenPandaTech/Palamedes/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.9%2B-blue)
+![Dependencies](https://img.shields.io/badge/runtime%20deps-none-brightgreen)
 
-- **Mate in 1** (six curated positions + derive-your-own from any FEN)
-- **Mate in 2** (verified by a small forced-mate search)
-- **Simple tactics** — currently a "win material" puzzle (grab a hanging queen)
+Palamedes (the mythical Greek inventor of board games) is an offline chess
+puzzle generator that ships with its own chess engine and **proves** every
+answer it gives you. It does not store a pre-baked answer key and hope it is
+right: each puzzle's solution is re-derived and re-checked by a bundled
+forced-mate search, so the tool cannot serve a "mate in 1" that is not actually
+mate. The whole thing — engine, verifier, generator, CLI, and their tests —
+runs on the Python standard library with **no runtime dependencies**.
+
+Puzzle types:
+
+- **Mate in 1** — draw from the curated bank, or derive one for any FEN you pass
+- **Mate in 2** — confirmed by a small exhaustive forced-mate search
+- **Win material** — a "grab the hanging piece" tactic checked 2 ply deep,
+  accounting for the opponent's best recapture
 
 Each puzzle carries a position (FEN), the side to move, the solution move(s) in
-UCI notation, and an ASCII board rendering. A verifier confirms every stated
-solution actually delivers mate / achieves its goal, so nothing in the bank is
-taken on trust.
+UCI notation, a human-readable SAN, and an ASCII board rendering.
 
 ## Why it is interesting
 
-The core ships with its **own self-contained chess engine** (move generation,
-check / checkmate / stalemate detection, and a tiny forced-mate solver) built
-on the Python standard library alone. That means the whole tool — and its unit
-tests — work with **zero third-party dependencies**.
+The core is a **self-contained chess engine** written from scratch on the
+standard library: FEN parsing/emitting, fully legal move generation (castling,
+en passant, promotions), check / checkmate / stalemate detection, and a small
+exhaustive `forced_mate_move` solver for the "mate in N" logic.
 
-The optional [`python-chess`](https://pypi.org/project/chess/) library is used
-in *one* test file purely as an independent referee: it cross-checks that this
-project's engine agrees with a mature reference implementation (legal moves,
-checkmate detection, and the mate solutions). If `python-chess` is not
-installed, that test file **skips itself cleanly** and everything else still
-passes.
+Correctness is not asserted, it is pinned. Move generation is checked against a
+known reference value (Kiwipete perft(1) = 48 legal moves), and an *optional*
+test file uses [`python-chess`](https://pypi.org/project/chess/) purely as an
+independent referee — cross-checking legal moves, checkmate detection, and the
+mate solutions against a mature implementation. That referee is the only
+third-party code anywhere near the project, it is dev/test-only, and if it is
+not installed the test file skips itself cleanly (nothing in the shipped tool
+imports it).
 
-## Project layout
+## Quickstart
 
-```
-Palamedes/
-├── palamedes/
-│   ├── __init__.py       # public API re-exports
-│   ├── engine.py         # pure-Python chess engine (FEN, moves, mate, ASCII)
-│   ├── fen_bank.py       # curated, verified puzzle bank (zero deps)
-│   ├── verifier.py       # confirms a solution achieves the puzzle goal
-│   ├── generator.py      # derive puzzles from positions / draw from the bank
-│   ├── cli.py            # argparse command-line interface
-│   └── __main__.py       # enables `python -m palamedes`
-├── tests/
-│   ├── test_engine.py        # engine primitives (stdlib only)
-│   ├── test_fen_bank.py      # every bank puzzle verifies (stdlib only)
-│   ├── test_verifier.py      # goal verification (stdlib only)
-│   ├── test_generator.py     # generation + rendering (stdlib only)
-│   ├── test_cli.py           # CLI entry point (stdlib only)
-│   └── test_with_chess.py    # OPTIONAL cross-check vs python-chess (skips if absent)
-├── conftest.py           # makes the package importable under bare `pytest`
-├── requirements.txt      # optional deps (pytest, chess) — core needs neither
-├── .gitignore
-└── README.md
-```
-
-## Setup
-
-The tool itself needs **nothing but Python 3.9+**. A virtual environment is only
-useful for installing the dev/test extras (`pytest`, and optionally `chess`).
-
-Windows (Git Bash / MSYS) or macOS / Linux:
+Requires **Python 3.9+**. There is nothing to install to run the tool — it is
+not published to PyPI and imports only the standard library, so you run it in
+place with `python -m palamedes`.
 
 ```bash
-cd "Palamedes"
-python -m venv .venv
+git clone https://github.com/GreenPandaTech/Palamedes.git
+cd Palamedes
 
-# Activate the environment:
-#   Git Bash / macOS / Linux:
-source .venv/Scripts/activate      # on macOS/Linux: source .venv/bin/activate
-
-# Install the optional test dependencies:
-pip install -r requirements.txt
-```
-
-Prefer not to make a venv? You can still run the app directly with the system
-Python — the shipped tool imports only the standard library.
-
-## Run the app
-
-From the project folder:
-
-```bash
-# A random puzzle (solution hidden):
+# A random puzzle, solution hidden:
 python -m palamedes
 
 # A random mate-in-1, solution revealed, reproducible via a seed:
 python -m palamedes --goal mate_in_1 --seed 5 --reveal
 
-# Restrict to a type: mate_in_1 | mate_in_2 | win_material
+# Pick a type: mate_in_1 | mate_in_2 | win_material
 python -m palamedes --goal mate_in_2 --reveal
 
 # Derive the mate-in-1 for ANY position you supply (quote the FEN):
@@ -114,77 +84,104 @@ FEN: 6k1/8/6K1/8/8/8/8/3Q4 w - - 0 1
 Solution: Qd8#  (UCI: d1d8)
 ```
 
-## Test
+## Tests
+
+The optional test extras (`pytest`, and the `python-chess` referee) install
+from `requirements.txt`:
 
 ```bash
-cd "Palamedes"
+python -m venv .venv
+source .venv/Scripts/activate   # macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt
 python -m pytest -q
 ```
 
-Latest local run: **109 passed** (all cross-checks included, `python-chess`
-installed).
+Test counts (local, Python 3.13):
 
-- Core-only (no third-party libs at all):
+- Full suite, `python-chess` installed: **109 passed**.
+- Core only, no third-party libs:
   `python -m pytest -q --ignore=tests/test_with_chess.py` → **62 passed**.
-- When `python-chess` is absent, `tests/test_with_chess.py` reports
-  **1 skipped** instead of failing (it uses
-  `pytest.importorskip("chess", exc_type=ImportError)`, which also keeps the
-  run free of the pytest 9.1 deprecation warning).
+- With `python-chess` absent, `tests/test_with_chess.py` reports **1 skipped**
+  rather than failing (it uses `pytest.importorskip("chess")`).
 
-## Architecture note
+CI runs the full suite on Python 3.11, 3.12, and 3.13 (see
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
 
-- **`engine.py`** is the foundation: an immutable-ish `Board` that parses/emits
-  FEN, generates fully *legal* moves (including castling, en passant and
-  promotions), and detects check / checkmate / stalemate. `forced_mate_move`
-  is a tiny exhaustive minimax used for the "mate in N" logic. Its correctness
-  is pinned by a Kiwipete perft(1) = 48 assertion and by cross-checks against
-  `python-chess`.
-- **`fen_bank.py`** is a list of plain dicts (id, FEN, goal, UCI solution(s),
-  human-readable SAN, theme). No answer is trusted blindly — the test suite
-  re-derives/re-verifies each one with the engine.
-- **`verifier.py`** confirms a candidate move achieves a puzzle's goal: mate in
-  1/2 via the search, or "win material" via a 2-ply capture evaluation that
+## Project layout
+
+```
+Palamedes/
+├── palamedes/
+│   ├── __init__.py       # public API re-exports
+│   ├── engine.py         # pure-Python chess engine (FEN, moves, mate, ASCII)
+│   ├── fen_bank.py       # curated, verified puzzle bank (zero deps)
+│   ├── verifier.py       # confirms a solution achieves the puzzle goal
+│   ├── generator.py      # derive puzzles from positions / draw from the bank
+│   ├── cli.py            # argparse command-line interface
+│   └── __main__.py       # enables `python -m palamedes`
+├── tests/
+│   ├── test_engine.py        # engine primitives (stdlib only)
+│   ├── test_fen_bank.py      # every bank puzzle verifies (stdlib only)
+│   ├── test_verifier.py      # goal verification (stdlib only)
+│   ├── test_generator.py     # generation + rendering (stdlib only)
+│   ├── test_cli.py           # CLI entry point (stdlib only)
+│   └── test_with_chess.py    # OPTIONAL cross-check vs python-chess (skips if absent)
+├── conftest.py           # makes the package importable under bare `pytest`
+├── requirements.txt      # optional dev deps (pytest, chess) — core needs neither
+└── README.md
+```
+
+## How it fits together
+
+- **`engine.py`** — an immutable-ish `Board` that parses/emits FEN, generates
+  fully *legal* moves, and detects check / checkmate / stalemate.
+  `forced_mate_move` is a small exhaustive minimax used for the "mate in N"
+  logic. Correctness is pinned by the Kiwipete perft(1) = 48 assertion and by
+  the optional `python-chess` cross-checks.
+- **`fen_bank.py`** — 9 curated puzzles (6 mate-in-1, 2 mate-in-2, 1
+  win-material) as plain dicts (id, FEN, goal, UCI solution(s), SAN, theme). No
+  answer is trusted blindly — the test suite re-verifies each with the engine.
+- **`verifier.py`** — confirms a candidate move achieves a puzzle's goal: mate
+  in 1/2 via the search, or "win material" via a 2-ply capture evaluation that
   accounts for the opponent's best recapture.
-- **`generator.py`** can *derive* a mate-in-1 puzzle from a raw position
-  (`derive_mate_in_1`) or draw a validated one from the bank
-  (`generate_puzzle`), and renders puzzles for the CLI.
-- **`cli.py`** is a thin argparse front end.
+- **`generator.py`** — derives a mate-in-1 from a raw position
+  (`derive_mate_in_1`), draws a validated one from the bank (`generate_puzzle`),
+  and renders puzzles for the CLI.
+- **`cli.py`** — a thin argparse front end.
 
-### Fallback behaviour (important)
+## Scope and limitations
 
-The requirement was to prefer `python-chess` but degrade gracefully if it will
-not install. This project takes the **robust path**: the mate/tactic logic is
-implemented directly in the bundled engine, so **the tool never depends on
-`python-chess` at all**. If the library is present it is used only to
-*independently validate* the engine (belt and braces); if it is missing, the
-generator, verifier, CLI and all core tests continue to work unchanged, backed
-by the curated + engine-verified FEN bank.
+This is a compact, self-verifying puzzle tool, not a full engine or trainer:
 
-## Safety / privacy notes
+- The forced-mate search is exhaustive and only intended for shallow depths
+  (mate-in-1 and mate-in-2). It is not a general-strength search.
+- Puzzle types are limited to mate-in-1, mate-in-2, and a single win-material
+  tactic. Richer motifs (forks, pins, skewers, back-rank, mate-in-3) are not
+  implemented.
+- The bank is small (9 hand-curated positions). New puzzles either come from
+  the bank or are derived mate-in-1s from a FEN you supply; there is no mining
+  from a game corpus.
+- CLI input/output is UCI-oriented; SAN is shown but not accepted as input.
 
-- 100% offline. No network calls, no external services, no telemetry.
-- No data is written anywhere except what you print to your own terminal.
-- No secrets, credentials, or personal data are involved.
+## Safety / privacy
+
+- 100% offline: no network calls, no external services, no telemetry.
+- Nothing is written to disk beyond what you print to your own terminal.
 - Deterministic and reproducible (`--seed`), suitable for CI.
 
 ## Roadmap
 
 **V2**
-- More tactical motifs verified from first principles: forks, pins, skewers,
-  discovered attacks, back-rank shots, and mate-in-3.
+- More motifs verified from first principles: forks, pins, skewers, discovered
+  attacks, back-rank shots, and mate-in-3.
 - Difficulty scoring (branching factor / solution length / material swing) and
   a `--difficulty` filter.
-- Interactive "solve" mode: read the user's move from stdin and check it, with
-  hints and retries.
-- SAN input/output everywhere (accept `Qd8#` as well as `d1d8`).
-- Export puzzles to PGN and to a JSON/SQLite puzzle store.
+- Interactive "solve" mode: read a move from stdin and check it, with hints.
+- Accept SAN input (`Qd8#`) as well as UCI (`d1d8`).
+- Export puzzles to PGN and to a JSON/SQLite store.
 
 **V3**
-- A puzzle *generator* that mines mates/tactics from a large game/position
-  corpus and auto-tags themes.
-- Optional Stockfish/UCI backend for deep tactic verification and rich
-  difficulty calibration (kept strictly offline, opt-in).
-- A minimal local web UI (isolated so the tested core stays dependency-free)
-  with a draggable board and a daily-puzzle mode.
-- Spaced-repetition training that tracks which motifs a user struggles with.
-```
+- Mine mates/tactics from a large game/position corpus and auto-tag themes.
+- Optional Stockfish/UCI backend for deeper verification (kept offline, opt-in).
+- A minimal local web UI (isolated so the tested core stays dependency-free).
+- Spaced-repetition training keyed to the motifs a user struggles with.
