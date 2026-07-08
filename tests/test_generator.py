@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import pytest
 
-from chesspuzzle.generator import (
+from palamedes.generator import (
     derive_mate_in_1,
     derive_mate_in_2,
     generate_puzzle,
     make_puzzle_from_position,
     render_puzzle,
 )
-from chesspuzzle.verifier import verify_puzzle
+from palamedes.verifier import verify_puzzle
 
 
 def test_derive_mate_in_1_finds_the_backrank_mate():

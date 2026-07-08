@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from chesspuzzle.engine import Board
-from chesspuzzle.fen_bank import PUZZLES, all_puzzles, get_puzzle, puzzles_by_goal
-from chesspuzzle.verifier import verify_puzzle
+from palamedes.engine import Board
+from palamedes.fen_bank import PUZZLES, all_puzzles, get_puzzle, puzzles_by_goal
+from palamedes.verifier import verify_puzzle
 
 
 def test_bank_is_non_empty_and_has_each_goal():

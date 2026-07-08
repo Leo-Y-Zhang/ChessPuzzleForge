@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from chesspuzzle.engine import Board
-from chesspuzzle.fen_bank import get_puzzle
-from chesspuzzle.verifier import (
+from palamedes.engine import Board
+from palamedes.fen_bank import get_puzzle
+from palamedes.verifier import (
     net_material_gain,
     verify_puzzle,
     verify_solution,

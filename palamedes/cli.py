@@ -4,23 +4,23 @@ Examples
 --------
 Print a random puzzle (position hidden solution)::
 
-    python -m chesspuzzle
+    python -m palamedes
 
 Print a random mate-in-1 and immediately reveal the answer::
 
-    python -m chesspuzzle --goal mate_in_1 --reveal
+    python -m palamedes --goal mate_in_1 --reveal
 
 Deterministic puzzle (useful for demos/tests)::
 
-    python -m chesspuzzle --seed 7 --reveal
+    python -m palamedes --seed 7 --reveal
 
 Derive the mate-in-1 for an arbitrary position of your own::
 
-    python -m chesspuzzle --fen "6k1/5ppp/8/8/8/8/8/R6K w - - 0 1" --reveal
+    python -m palamedes --fen "6k1/5ppp/8/8/8/8/8/R6K w - - 0 1" --reveal
 
 List every puzzle in the bank::
 
-    python -m chesspuzzle --list
+    python -m palamedes --list
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ GOALS = ("mate_in_1", "mate_in_2", "win_material")
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="chesspuzzle",
+        prog="palamedes",
         description="Generate and verify offline chess puzzles (mate-in-1/2, tactics).",
     )
     parser.add_argument(

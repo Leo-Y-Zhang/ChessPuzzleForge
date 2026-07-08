@@ -1,4 +1,4 @@
-"""Enable ``python -m chesspuzzle``."""
+"""Enable ``python -m palamedes``."""
 
 from __future__ import annotations
 

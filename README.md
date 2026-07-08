@@ -1,4 +1,4 @@
-# Chess Puzzle Generator
+# Palamedes - Chess Puzzle Generator
 
 A small, fully offline chess puzzle generator and verifier written in pure
 Python. It produces and **proves** the answers to puzzles:
@@ -29,15 +29,15 @@ passes.
 ## Project layout
 
 ```
-chess-puzzle-generator/
-├── chesspuzzle/
+Palamedes/
+├── palamedes/
 │   ├── __init__.py       # public API re-exports
 │   ├── engine.py         # pure-Python chess engine (FEN, moves, mate, ASCII)
 │   ├── fen_bank.py       # curated, verified puzzle bank (zero deps)
 │   ├── verifier.py       # confirms a solution achieves the puzzle goal
 │   ├── generator.py      # derive puzzles from positions / draw from the bank
 │   ├── cli.py            # argparse command-line interface
-│   └── __main__.py       # enables `python -m chesspuzzle`
+│   └── __main__.py       # enables `python -m palamedes`
 ├── tests/
 │   ├── test_engine.py        # engine primitives (stdlib only)
 │   ├── test_fen_bank.py      # every bank puzzle verifies (stdlib only)
@@ -59,7 +59,7 @@ useful for installing the dev/test extras (`pytest`, and optionally `chess`).
 Windows (Git Bash / MSYS) or macOS / Linux:
 
 ```bash
-cd "chess-puzzle-generator"
+cd "Palamedes"
 python -m venv .venv
 
 # Activate the environment:
@@ -79,20 +79,20 @@ From the project folder:
 
 ```bash
 # A random puzzle (solution hidden):
-python -m chesspuzzle
+python -m palamedes
 
 # A random mate-in-1, solution revealed, reproducible via a seed:
-python -m chesspuzzle --goal mate_in_1 --seed 5 --reveal
+python -m palamedes --goal mate_in_1 --seed 5 --reveal
 
 # Restrict to a type: mate_in_1 | mate_in_2 | win_material
-python -m chesspuzzle --goal mate_in_2 --reveal
+python -m palamedes --goal mate_in_2 --reveal
 
 # Derive the mate-in-1 for ANY position you supply (quote the FEN):
-python -m chesspuzzle --fen "6k1/5ppp/8/8/8/8/8/R6K w - - 0 1" --reveal
+python -m palamedes --fen "6k1/5ppp/8/8/8/8/8/R6K w - - 0 1" --reveal
 
 # Inspect the bank / re-verify every puzzle with the engine:
-python -m chesspuzzle --list
-python -m chesspuzzle --verify-all
+python -m palamedes --list
+python -m palamedes --verify-all
 ```
 
 Example output:
@@ -117,7 +117,7 @@ Solution: Qd8#  (UCI: d1d8)
 ## Test
 
 ```bash
-cd "chess-puzzle-generator"
+cd "Palamedes"
 python -m pytest -q
 ```
 

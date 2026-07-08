@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from chesspuzzle.cli import main
+from palamedes.cli import main
 
 
 def test_cli_list(capsys):

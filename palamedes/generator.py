@@ -7,7 +7,7 @@ The generator does two complementary things:
    how the tool "generates" a puzzle from a raw position rather than trusting a
    hand-written answer.
 2. **Curation** - it can also draw a validated puzzle from the built-in bank
-   (:mod:`chesspuzzle.fen_bank`), which is the reliable fallback when no
+   (:mod:`palamedes.fen_bank`), which is the reliable fallback when no
    position source is supplied.
 
 Everything here is pure standard library.

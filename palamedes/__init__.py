@@ -2,7 +2,7 @@
 
 Public API re-exports for convenience::
 
-    from chesspuzzle import Board, generate_puzzle, verify_puzzle
+    from palamedes import Board, generate_puzzle, verify_puzzle
 """
 
 from __future__ import annotations
