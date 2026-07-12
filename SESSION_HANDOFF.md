@@ -50,27 +50,43 @@ test_with_chess.py (importorskip chess referee).
 - [x] Step 5 - Verified motifs: pins & skewers (find_pins/find_skewers, geometric + engine-verified)
 - [x] Step 6 - Difficulty scoring + --difficulty filter (pure, deterministic)
 - [x] Step 7 - Interactive solve mode + SAN input in the CLI (additive)
-- [ ] Step 8 - Export (PGN + JSON) + golden digest + hostile-input sweep + perf sanity
+- [x] Step 8 - Export (PGN + JSON) + golden digest + hostile-input sweep + perf sanity
 - [ ] Step 9 - Docs + version 2.0.0 + final adversarial 3-lens review + merge --no-ff + tag v2.0.0
 
 ## Exact next step
-Step 8 - Export (PGN + JSON) + golden digest + hostile-input sweep + perf sanity (PURE, additive,
-TDD). (a) EXPORT: add puzzle_to_json(puzzle) -> DETERMINISTIC JSON (json.dumps sort_keys) and
-puzzle_to_pgn(puzzle) -> a minimal VALID PGN (FEN + SetUp "1" tags, the solution move(s) in SAN via
-move_to_san, deterministic headers, NO wall-clock/Date unless injected). Put them in a new
-palamedes/export.py (or generator.py); fail-loud (ValueError) on a malformed puzzle. (b) GOLDEN
-DIGEST: test_golden.py pins a sha256 of a canonical DETERMINISTIC artefact - e.g. the concatenated
-puzzle_to_json over all_puzzles() (sorted by id), OR [generate_puzzle(seed=i) for i in range(8)]
-ids+fens. Pin GOLDEN_DIGEST as a constant; regenerate only on an intentional change + say why. (c)
-HOSTILE-INPUT SWEEP: test_hostile.py asserting EVERY public entry fails loud on bad input:
-Board.from_fen (wrong field count / bad piece char / bad side-to-move / bad ranks), move_from_uci
-(malformed + illegal), parse_san (garbage), verify_solution (unknown goal returns (False,..) - ok),
-difficulty (bad puzzle), generate_puzzle (impossible goal/difficulty), puzzle_to_json/pgn (malformed)
--> ValueError; and the tactics fns (find_forks/pins/skewers) return [] on a bare-king board (no
-crash). Never a traceback. (d) PERF: a bounded check (perft(startpos,3)==8902 within a generous wall
-bound; timing lives in the TEST only, never in outputs). Verify gate. Commit+push, mark [x], set
-Step 9 (docs README/CHANGELOG + version 2.0.0 + final adversarial 3-lens review + merge --no-ff +
-tag). NOTE: keep exports DETERMINISTIC (sort_keys, no/injected timestamp); the golden pins it.
+Step 9 - Docs + version 2.0.0 + final adversarial 3-lens review + merge --no-ff + tag (RELEASE, LAST
+step). (a) DOCS: rewrite README for the v2 story (perft harness / SAN parse / mate-in-3 / VERIFIED
+forks / pins & skewers / difficulty + --difficulty / --solve mode / PGN+JSON export) - KEEP the
+"PROVES every answer" + zero-runtime-dep framing; update the test count to 201; FIX the Python badge
+(3.9 -> 3.11) + the Setup note (requires-python was bumped to 3.11 in Step 0); add CHANGELOG.md
+(v2.0.0 entry). Bump kineo... NO: palamedes/__init__ __version__ 1.0.0 -> 2.0.0 AND pyproject version
+-> 2.0.0 in LOCKSTEP + a test asserting they match (parse pyproject with a regex, no tomllib). (b)
+FINAL ADVERSARIAL 3-LENS REVIEW (a Workflow) of the WHOLE v2: correctness (engine perft-pinned; every
+tactic/mate PROVEN by the engine + cross-checked vs python-chess; never an illegal move or a false
+tactic; parse_san/move_to_san agree), robustness (every public entry fails loud on hostile input),
+determinism+purity (no wall-clock/random in any result or export; the golden reflects the real
+pipeline; import palamedes / import palamedes.cli need NO chess; zero runtime deps). Reproduce + fix
+every real finding with a regression test; re-run the gate. (c) MERGE + TAG: git checkout main ->
+git merge origin/main (reconcile any parallel proprietary-licence commit, KEEP proprietary; reset
+--hard DENIED) -> git merge --no-ff feature/to-the-max -> gate green on the merge -> push main
+(PRIVATE, allowed) -> tag v2.0.0 annotated (gh api to move a tag if needed) -> delete feature branch
+(local+remote) -> verify CI green -> update memory (project_repo_max_upgrades: Palamedes v2.0.0 DONE)
++ handoff -> START Mentor (repo #16). NOTE: README currently claims Python 3.9+ but requires-python
+is now 3.11 (Step 0) - fix the badge + Setup note here for honesty.
+
+DONE Step 8 (2026-07-12): NEW palamedes/export.py puzzle_to_json(puzzle) (DETERMINISTIC json.dumps
+sort_keys) + puzzle_to_pgn(puzzle) (minimal VALID PGN: Event/Site/Date "????.??.??" [NO wall-clock] /
+Round/White/Black/Result/SetUp "1"/FEN/PuzzleGoal tags + the key move in SAN via move_to_san;
+move_from_uci validates legality). Fail-loud (ValueError) on non-str fen/goal or a missing solution.
+Re-exported puzzle_to_json/puzzle_to_pgn. VERIFIED all 10 bank PGNs PARSE with python-chess (FEN
+round-trips, exactly 1 move each). NEW tests: test_export.py (json deterministic + sorted keys; pgn
+tags + key move + placeholder date; fail-loud); test_golden.py pins sha256 of the whole-bank sorted
+puzzle_to_json = 0a4ca774cc89612915ea19ec41a2eeb2804777dbdb15b844b3987eaa21e5e6cf (regenerate ONLY on
+an intentional change) + repeat-stable; test_hostile.py sweep (from_fen rejects 5 bad FENs incl
+7-ranks / rank-sum-9 / bad-piece / bad-side; move_from_uci malformed + illegal; parse_san garbage /
+empty / O-O-O-O; difficulty unknown goal; generate_puzzle impossible; export malformed -> all
+ValueError; find_forks/pins/skewers on bare kings -> []); test_perf.py perft(startpos,3)==8902 under
+10s. Full suite 182 -> 201 in ~3.7s, ruff + mypy strict clean (10 files).
 
 DONE Step 7 (2026-07-12): cli.py interactive --solve mode + SAN input (additive; v1 CLI unchanged).
 main(argv, reader=input) now takes an INJECTABLE reader (testable without real stdin). NEW
