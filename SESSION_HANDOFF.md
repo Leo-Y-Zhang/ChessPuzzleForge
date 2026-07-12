@@ -44,7 +44,7 @@ test_with_chess.py (importorskip chess referee).
 ## Build order (spec steps) - status
 - [x] Step 0 - Tooling: pyproject (ruff E/F/W/I/UP/B/SIM + mypy --strict) + CI lint/type + baseline test
 - [x] Step 1 - Perft correctness harness (perft(board,depth) + known-value reference table)
-- [ ] Step 2 - SAN parse (parse_san w/ full disambiguation; round-trip; cross-check chess)
+- [x] Step 2 - SAN parse (parse_san w/ full disambiguation; round-trip; cross-check chess)
 - [ ] Step 3 - Mate-in-3 search (forced_mate_in_n up to 3, perf-bounded, verified)
 - [ ] Step 4 - Verified motif: forks (find_forks, engine-verified double attack + material gain)
 - [ ] Step 5 - Verified motifs: pins & skewers (find_pins/find_skewers, geometric + engine-verified)
@@ -54,20 +54,36 @@ test_with_chess.py (importorskip chess referee).
 - [ ] Step 9 - Docs + version 2.0.0 + final adversarial 3-lens review + merge --no-ff + tag v2.0.0
 
 ## Exact next step
-Step 2 - SAN parse (accept SAN input) (PURE, additive, TDD). Add `parse_san(board, san)
--> Move` to engine.py: parse Standard Algebraic Notation into a LEGAL Move with FULL
-disambiguation - piece letter, from-file and/or from-rank (Nbd2 / R1e2 / Qh4e1), captures
-(x, and pawn captures exd5), promotions (e8=Q, and =N/=R/=B), castling (O-O / O-O-O, also
-tolerate 0-0), en passant, and TRAILING +/# check/mate suffixes (strip them). Resolve
-against the ACTUAL legal moves: generate legal_moves() and find the UNIQUE move whose
-move_to_san(board, m) (suffix-stripped) matches the input - raise ValueError if none match
-or if >1 match (ambiguous / malformed / illegal). ROUND-TRIP property test: for every
-legal move in the bank + perft positions, parse_san(board, move_to_san(board, m)) == m.
-Cross-check in test_with_chess: parse a batch of SANs and compare to chess.Board().parse_san
-/ push. Fail-loud (ValueError) on illegal/ambiguous/empty SAN. Re-export parse_san from
-__init__. Verify bare pytest + ruff + mypy --strict. Commit+push, mark [x], set Step 3
-(mate-in-3). NOTE: move_to_san already exists (the renderer) - lean on legal_moves +
-move_to_san for matching so parse_san stays consistent with the renderer's disambiguation.
+Step 3 - Mate-in-3 (PURE, additive, TDD). GOOD NEWS: engine.forced_mate_move(board, depth)
+is ALREADY general-depth (its _forces_mate_after_reply recursion counts mover's moves), so
+forced_mate_move(board, 3) already finds a move forcing mate in <=3 - CONFIRM with tests,
+don't rewrite. Work: (a) add >=1 VERIFIED mate-in-3 position to fen_bank (goal "mate_in_3";
+solution UCI; SAN; theme) - VERIFY it with the engine before committing (forced_mate_move
+finds it AND every defence loses in <=3). (b) verifier.verify_solution: add a "mate_in_3"
+branch (reuse _move_forces_mate(board, move, 3)); verify_puzzle already loops solutions.
+(c) generator: mate_in_3 flows through generate_puzzle/puzzles_by_goal automatically once
+banked; maybe add derive_mate_in_3(fen) using forced_mate_move(_,3). (d) CLI --goal already
+takes the goal string; ensure mate_in_3 is accepted (cli may hardcode choices - check
+cli.py argparse choices and add mate_in_3). TDD test_mate3.py: a known mate-in-3 -> solver
+finds a forcing move + _move_forces_mate(...,3) True; a no-mate position -> None; monotone
+(a mate-in-1 is also found at depth 3); the new bank puzzle verifies. Cross-check the
+mate-in-3 vs python-chess (_can_force_mate in test_with_chess). PERF: keep mate positions
+SPARSE (forced_mate at depth 3 is exponential in branching; endgame positions only). Verify
+gate. Commit+push, mark [x], set Step 4 (verified forks).
+
+DONE Step 2 (2026-07-12): engine.parse_san(board, san) -> Move NEW (the inverse of
+move_to_san). Component parser: strip trailing +/#; castling O-O / O-O-O (0-0 tolerated);
+promotion suffix =Q/R/B/N; leading piece letter (pawn by default); strip capture x; last 2
+chars = destination square; leading chars = file/rank disambiguation; then select the UNIQUE
+legal move matching (destination, moving-piece letter for the side to move, promotion,
+disamb file/rank). Fail-loud: non-str -> TypeError; empty / illegal / ambiguous / malformed
+-> ValueError. Re-exported from palamedes (__init__ + __all__). TESTS test_san.py (12) incl
+a ROUND-TRIP property over 6 positions x every legal move (parse_san(move_to_san(m)) == m -
+covers castling / captures / promotion / disambiguation / en-passant / check suffixes) + a
+python-chess CROSS-CHECK in test_with_chess (parse_san accepts chess.Board.san(m) and
+resolves to the same UCI across REFERENCE_FENS). Full suite 127 -> 152, ruff + mypy strict
+clean. NOTE: Move.promotion is stored LOWERCASE (e.g. "q"); move_to_san appends +/# suffixes,
+so the round-trip already exercises suffix stripping.
 
 DONE Step 1 (2026-07-12): engine.perft(board, depth) NEW - standard leaf-node counter
 (depth 0 -> 1; else sum of perft(push(m), depth-1) over legal_moves; depth < 0 -> ValueError

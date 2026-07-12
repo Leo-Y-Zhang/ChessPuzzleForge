@@ -584,6 +584,87 @@ def _san_disambiguation(board: Board, move: Move, piece: str) -> str:
     return square_name(move.from_sq)
 
 
+def parse_san(board: Board, san: str) -> Move:
+    """Parse Standard Algebraic Notation into a legal :class:`Move` for ``board``.
+
+    Handles piece letters, file/rank disambiguation, captures, pawn promotions
+    (``e8=Q``), castling (``O-O`` / ``O-O-O``, also ``0-0``), en passant, and any
+    trailing ``+`` / ``#`` suffix. Resolves against the actual legal moves and
+    raises ``ValueError`` unless the SAN names exactly one legal move (an
+    illegal, ambiguous or malformed SAN fails loud).
+    """
+    if not isinstance(san, str):
+        raise TypeError(f"san must be a string, got {san!r}")
+    text = san.strip().rstrip("+#")
+    if not text:
+        raise ValueError("empty SAN")
+
+    legal = list(board.legal_moves())
+
+    normalized = text.replace("0", "O")
+    if normalized in ("O-O", "O-O-O"):
+        kingside = normalized == "O-O"
+        matches = [m for m in legal if m.is_castle and (file_of(m.to_sq) == 6) == kingside]
+        if len(matches) == 1:
+            return matches[0]
+        side = "king" if kingside else "queen"
+        raise ValueError(f"no legal {side}-side castling for SAN {san!r}")
+
+    promotion: str | None = None
+    body = text
+    if len(body) >= 2 and body[-2] == "=":
+        promo = body[-1].upper()
+        if promo not in "QRBN":
+            raise ValueError(f"invalid promotion piece in SAN {san!r}")
+        promotion = promo
+        body = body[:-2]
+
+    if body and body[0] in "NBRQK":
+        kind = body[0]
+        rest = body[1:]
+    else:
+        kind = "P"
+        rest = body
+
+    rest = rest.replace("x", "")
+    if len(rest) < 2:
+        raise ValueError(f"malformed SAN {san!r} (no destination square)")
+    try:
+        dest = parse_square(rest[-2:])
+    except ValueError as exc:
+        raise ValueError(f"malformed SAN {san!r}: {exc}") from None
+
+    disamb_file: int | None = None
+    disamb_rank: int | None = None
+    for ch in rest[:-2]:
+        if ch in "abcdefgh":
+            disamb_file = "abcdefgh".index(ch)
+        elif ch in "12345678":
+            disamb_rank = int(ch) - 1
+        else:
+            raise ValueError(f"malformed SAN disambiguation in {san!r}")
+
+    want = kind if board.turn == WHITE else kind.lower()
+    candidates: list[Move] = []
+    for m in legal:
+        if m.to_sq != dest or board.piece_at(m.from_sq) != want:
+            continue
+        mp = m.promotion.upper() if m.promotion else None
+        if mp != promotion:
+            continue
+        if disamb_file is not None and file_of(m.from_sq) != disamb_file:
+            continue
+        if disamb_rank is not None and rank_of(m.from_sq) != disamb_rank:
+            continue
+        candidates.append(m)
+
+    if len(candidates) == 1:
+        return candidates[0]
+    if not candidates:
+        raise ValueError(f"no legal move matches SAN {san!r}")
+    raise ValueError(f"ambiguous SAN {san!r}: {len(candidates)} legal moves match")
+
+
 def perft(board: Board, depth: int) -> int:
     """Count leaf nodes of the legal move tree to ``depth`` (a move-gen pin).
 
