@@ -43,7 +43,7 @@ test_with_chess.py (importorskip chess referee).
 
 ## Build order (spec steps) - status
 - [x] Step 0 - Tooling: pyproject (ruff E/F/W/I/UP/B/SIM + mypy --strict) + CI lint/type + baseline test
-- [ ] Step 1 - Perft correctness harness (perft(board,depth) + known-value reference table)
+- [x] Step 1 - Perft correctness harness (perft(board,depth) + known-value reference table)
 - [ ] Step 2 - SAN parse (parse_san w/ full disambiguation; round-trip; cross-check chess)
 - [ ] Step 3 - Mate-in-3 search (forced_mate_in_n up to 3, perf-bounded, verified)
 - [ ] Step 4 - Verified motif: forks (find_forks, engine-verified double attack + material gain)
@@ -54,18 +54,32 @@ test_with_chess.py (importorskip chess referee).
 - [ ] Step 9 - Docs + version 2.0.0 + final adversarial 3-lens review + merge --no-ff + tag v2.0.0
 
 ## Exact next step
-Step 1 - Perft correctness harness (PURE, additive, TDD). Add `perft(board, depth)` to
-engine.py (the standard move-generation node counter: sum of perft(push(m), depth-1)
-over legal_moves; depth 0 -> 1). Add tests/test_perft.py pinning it against KNOWN
-reference values: startpos perft(1)=20, perft(2)=400, perft(3)=8902; Kiwipete
-(r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -) perft(1)=48,
-perft(2)=2039; "position 3" (8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -) perft(1)=14,
-perft(2)=191; "position 4" (r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq -)
-perft(1)=6. Keep depths SHALLOW (avoid perft(4)+ startpos = ~197k nodes, slow in pure
-Python; perft(3) startpos 8902 is fine). This is a STRONG move-gen pin far beyond the
-single perft(1)=48. Optional `perft_divide(board, depth) -> dict[str,int]` (per-root-move
-counts) for debugging - if added, mypy-annotate it. Re-export perft in __init__ if useful.
-Verify bare pytest + ruff + mypy --strict. Commit+push, mark [x], set Step 2 (SAN parse).
+Step 2 - SAN parse (accept SAN input) (PURE, additive, TDD). Add `parse_san(board, san)
+-> Move` to engine.py: parse Standard Algebraic Notation into a LEGAL Move with FULL
+disambiguation - piece letter, from-file and/or from-rank (Nbd2 / R1e2 / Qh4e1), captures
+(x, and pawn captures exd5), promotions (e8=Q, and =N/=R/=B), castling (O-O / O-O-O, also
+tolerate 0-0), en passant, and TRAILING +/# check/mate suffixes (strip them). Resolve
+against the ACTUAL legal moves: generate legal_moves() and find the UNIQUE move whose
+move_to_san(board, m) (suffix-stripped) matches the input - raise ValueError if none match
+or if >1 match (ambiguous / malformed / illegal). ROUND-TRIP property test: for every
+legal move in the bank + perft positions, parse_san(board, move_to_san(board, m)) == m.
+Cross-check in test_with_chess: parse a batch of SANs and compare to chess.Board().parse_san
+/ push. Fail-loud (ValueError) on illegal/ambiguous/empty SAN. Re-export parse_san from
+__init__. Verify bare pytest + ruff + mypy --strict. Commit+push, mark [x], set Step 3
+(mate-in-3). NOTE: move_to_san already exists (the renderer) - lean on legal_moves +
+move_to_san for matching so parse_san stays consistent with the renderer's disambiguation.
+
+DONE Step 1 (2026-07-12): engine.perft(board, depth) NEW - standard leaf-node counter
+(depth 0 -> 1; else sum of perft(push(m), depth-1) over legal_moves; depth < 0 -> ValueError
+fail-loud); re-exported from palamedes (__init__ + __all__). NEW tests/test_perft.py pins
+move generation against KNOWN reference perft values: startpos 1/2/3 = 20/400/8902; Kiwipete
+1/2 = 48/2039; pos3 (8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -) 1/2/3 = 14/191/2812; pos4
+(r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq -) 1/2 = 6/264; pos5
+(rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ -) 1/2 = 44/1486. These exercise
+castling / en-passant / promotion / checks / pins and ALL MATCH => the engine's legal move
+generation is CORRECT (strengthens the engine-verified moat far beyond the single
+perft(1)=48). 14 new tests. Full suite 113 -> 127 in 0.55s (perft at these depths is fast).
+ruff + mypy --strict clean.
 
 DONE Step 0 (2026-07-12): tooling. NEW pyproject.toml (ruff line100 target py311 select
 E/F/W/I/UP/B/SIM ignore SIM108; mypy python 3.11 strict files=palamedes + chess override
