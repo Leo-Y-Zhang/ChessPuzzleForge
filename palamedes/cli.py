@@ -32,7 +32,7 @@ from .fen_bank import all_puzzles
 from .generator import generate_puzzle, make_puzzle_from_position, render_puzzle
 from .verifier import verify_puzzle
 
-GOALS = ("mate_in_1", "mate_in_2", "win_material")
+GOALS = ("mate_in_1", "mate_in_2", "mate_in_3", "win_material")
 
 
 def build_parser() -> argparse.ArgumentParser:
