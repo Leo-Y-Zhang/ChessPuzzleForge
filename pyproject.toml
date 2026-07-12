@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "palamedes"
+version = "2.0.0"
+description = "Engine-verified offline chess puzzle generator (mate-in-N, tactics). Pure Python, zero runtime dependencies; every answer is proven by a bundled from-scratch chess engine."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary - All Rights Reserved" }
+authors = [{ name = "GreenPandaTech" }]
+keywords = ["chess", "puzzle", "mate-in-n", "tactics", "offline", "zero-dependency"]
+dependencies = []
+
+[project.optional-dependencies]
+# The optional python-chess referee is used ONLY by the dev/test cross-check.
+test = ["pytest>=7", "chess>=1.9"]
+dev = ["pytest>=7", "chess>=1.9", "ruff>=0.6", "mypy>=1.11"]
+
+[project.scripts]
+palamedes = "palamedes.cli:main"
+
+[tool.setuptools]
+packages = ["palamedes"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+ignore = ["SIM108"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["palamedes"]
+# python-chess (dev/test-only referee) has no bundled stubs; the shipped core
+# never imports it, but guard against a stray import being a hard mypy error.
+[[tool.mypy.overrides]]
+module = ["chess", "chess.*"]
+ignore_missing_imports = true
