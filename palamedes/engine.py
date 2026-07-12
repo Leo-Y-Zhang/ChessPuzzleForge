@@ -247,6 +247,42 @@ class Board:
 
         return False
 
+    def attacks_from(self, sq: int) -> set[int]:
+        """Squares the piece on ``sq`` attacks (pseudo-attacks; ignores pins).
+
+        Empty when ``sq`` is empty. Pawns attack only their two forward diagonals.
+        A sliding piece's ray stops at (and includes) the first occupied square.
+        """
+        piece = self.squares[sq]
+        if piece is None:
+            return set()
+        kind = piece.upper()
+        f, r = file_of(sq), rank_of(sq)
+        out: set[int] = set()
+        if kind == "N":
+            for df, dr in _KNIGHT_DELTAS:
+                if _on_board(f + df, r + dr):
+                    out.add(square(f + df, r + dr))
+        elif kind == "K":
+            for df, dr in _KING_DELTAS:
+                if _on_board(f + df, r + dr):
+                    out.add(square(f + df, r + dr))
+        elif kind == "P":
+            pdir = 1 if piece.isupper() else -1
+            for df in (-1, 1):
+                if _on_board(f + df, r + pdir):
+                    out.add(square(f + df, r + pdir))
+        else:
+            dirs = _BISHOP_DIRS if kind == "B" else _ROOK_DIRS if kind == "R" else _QUEEN_DIRS
+            for df, dr in dirs:
+                nf, nr = f + df, r + dr
+                while _on_board(nf, nr):
+                    out.add(square(nf, nr))
+                    if self.squares[square(nf, nr)] is not None:
+                        break
+                    nf, nr = nf + df, nr + dr
+        return out
+
     def is_check(self, color: str | None = None) -> bool:
         color = color or self.turn
         ks = self.king_square(color)

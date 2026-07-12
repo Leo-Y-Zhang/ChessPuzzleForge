@@ -46,7 +46,7 @@ test_with_chess.py (importorskip chess referee).
 - [x] Step 1 - Perft correctness harness (perft(board,depth) + known-value reference table)
 - [x] Step 2 - SAN parse (parse_san w/ full disambiguation; round-trip; cross-check chess)
 - [x] Step 3 - Mate-in-3 search (forced_mate_in_n up to 3, perf-bounded, verified)
-- [ ] Step 4 - Verified motif: forks (find_forks, engine-verified double attack + material gain)
+- [x] Step 4 - Verified motif: forks (find_forks, engine-verified double attack + material gain)
 - [ ] Step 5 - Verified motifs: pins & skewers (find_pins/find_skewers, geometric + engine-verified)
 - [ ] Step 6 - Difficulty scoring + --difficulty filter (pure, deterministic)
 - [ ] Step 7 - Interactive solve mode + SAN input in the CLI (additive)
@@ -54,25 +54,42 @@ test_with_chess.py (importorskip chess referee).
 - [ ] Step 9 - Docs + version 2.0.0 + final adversarial 3-lens review + merge --no-ff + tag v2.0.0
 
 ## Exact next step
-Step 4 - Verified motif: forks (PURE, additive, TDD) - the hardest/most distinctive step;
-keep the verification STRICT (an engine-PROVEN material win, never a pattern guess). Add a
-NEW palamedes/tactics.py with `find_forks(board) -> list[...]`: a move by the side to move
-that, once played, ATTACKS >= 2 enemy targets (a piece + the king = royal fork, or >= 2
-pieces) such that the opponent cannot save the material, netting a material win VERIFIED by
-the engine. Approach per legal move m: push; find the moved piece's attacks on enemy pieces
-(reuse the engine's attack logic / is_attacked_by / a squares-attacked helper); require >= 2
-worthwhile targets; then PROVE the win with a short search - e.g. over the opponent's best
-reply, the attacker still wins material (extend the net_material_gain idea, or a 2-3 ply
-minimax on material). Return a small record: move (UCI + SAN), forked target squares, and
-the proven material gain. HONESTY: only report a fork that genuinely wins. Cross-check a
-known knight/royal fork vs python-chess (the attacked squares after the move). Optionally
-add a fork puzzle to fen_bank (theme 'fork', goal 'win_material' or a new goal). Fail-loud on
-bad FEN. TDD test_tactics.py: a clean royal knight fork winning the queen -> found with the
-right move + targets + gain; a quiet position -> []; a FAKE fork where the opponent defends/
-recaptures and does NOT lose material -> NOT reported. Verify gate. Commit+push, mark [x],
-set Step 5 (pins & skewers). PERF: the whole-board scan x a short per-move search can be
-heavy - keep the proof shallow (2-3 ply) and test on sparse positions; watch suite runtime
-(mate-in-3 already pushed it to ~5s).
+Step 5 - Verified motifs: pins & skewers (PURE, additive, TDD; in tactics.py). Add
+find_pins(board) + find_skewers(board) using the NEW Board.attacks_from + ray-walking from
+each of the SIDE-TO-MOVE's sliders (B/R/Q). A PIN: a mover's slider ray hits an enemy piece
+(front) with a MORE valuable enemy piece or the KING behind it on the same ray, nothing
+between -> the front piece is pinned (absolute if the KING is behind). A SKEWER: same ray but
+the MORE valuable enemy piece is in FRONT and a lesser one behind (moving the front exposes
+the back). Report a Pin(attacker sq, front sq, back sq, absolute:bool, ...) / Skewer(...).
+VERIFY: for an absolute pin, confirm via legal_moves that the pinned piece truly cannot move
+off the line (python-chess board.is_pinned(color, sq) cross-check). For a skewer/pin that
+WINS material, PROVE it with the existing _forced_gain material search (reuse from forks) -
+only report a winning line-tactic when the material is genuinely won; a refuted one is not
+reported. Cross-check vs python-chess (is_pinned / pin, and gives_check for a skewer-check).
+Fail-loud on bad input. TDD test (extend test_tactics.py): a clean ABSOLUTE pin (a rook pins
+a knight to the king) found + absolute True + python-chess agrees; a SKEWER-check winning the
+piece behind found + proven; a plain line with equal/defended pieces -> none; a refuted skewer
+-> not reported. Verify gate. Commit+push, mark [x], set Step 6 (difficulty scoring). NOTE:
+reuse tactics._forced_gain / _quiesce / attacks_from; python-chess board.is_pinned(color, sq)
++ board.pin(color, sq) are ideal cross-checks for absolute pins. PERF: ray-walk is cheap;
+keep any material proof shallow (1-ply defence + quiescence like forks).
+
+DONE Step 4 (2026-07-12): NEW palamedes/tactics.py find_forks(board, min_gain=2.0) ->
+list[Fork] = ENGINE-VERIFIED forks (never pattern-matched). NEW Board.attacks_from(sq) ->
+set[int] (per-piece pseudo-attacks; reuses the engine deltas; pawns = 2 diagonals; sliders
+stop at + include the first occupied square). A fork = a legal move whose moved piece then
+attacks >= 2 significant enemy targets (>= 2 pieces worth >= 3, OR >= 1 piece + the enemy king
+= royal fork) AND provably wins >= min_gain material: net = capture_value(move) -
+_forced_gain(child, 1), where _forced_gain is a negamax giving the opponent ONE full defensive
+move then _quiesce (capture-only quiescence, stand-pat 0) resolves - so a "fork" refuted by
+capturing the forking piece or otherwise saving the material is NOT reported. Fork(uci, san,
+targets(square names), gain). Re-exported find_forks + Fork. TDD test_tactics.py (3): royal
+knight fork Ng4-f6+ forking Ke8+Qe4 (4k3/8/8/8/4q1N1/8/8/6K1 w) found w/ targets e4/e8, gain
+9; the SAME + a black g7 pawn (gxf6 refutes) -> NOT reported; bare kings -> []. + a python-
+chess CROSS-CHECK in test_with_chess (fork move legal + gives check + the knight really
+attacks the queen square via chess.attacks). Full suite 164 -> 168 in ~3.7s. ruff + mypy
+strict clean (8 files). NOTE: attacks_from is a general engine primitive - reuse it (+
+_forced_gain / _quiesce) for Step 5 pins/skewers.
 
 DONE Step 3 (2026-07-12): mate-in-3. CONFIRMED engine.forced_mate_move is ALREADY
 general-depth (finds a forced mate-in-3; no rewrite needed). Added a VERIFIED bank puzzle
