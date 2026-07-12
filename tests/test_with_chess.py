@@ -12,6 +12,7 @@ import pytest
 
 from palamedes.engine import Board, move_to_san, parse_san
 from palamedes.fen_bank import PUZZLES
+from palamedes.tactics import find_forks
 
 # Pass ``exc_type=ImportError`` so pytest skips cleanly when the optional
 # ``python-chess`` package is simply absent, without the default (soon-to-be
@@ -57,6 +58,19 @@ def test_parse_san_accepts_reference_san(fen):
         assert parsed.uci() == m.uci(), (
             f"parse_san({ref_san!r}) in {fen} -> {parsed.uci()} != {m.uci()}"
         )
+
+
+def test_find_forks_royal_fork_agrees_with_reference():
+    fen = "4k3/8/8/8/4q1N1/8/8/6K1 w - - 0 1"
+    forks = find_forks(Board.from_fen(fen))
+    assert len(forks) == 1
+    cb = chess.Board(fen)
+    assert cb.is_valid()
+    mv = chess.Move.from_uci(forks[0].uci)
+    assert mv in cb.legal_moves
+    assert cb.gives_check(mv)          # the fork move is a check per the reference
+    cb.push(mv)
+    assert chess.E4 in cb.attacks(chess.F6)  # the knight really attacks the queen
 
 
 @pytest.mark.parametrize("fen", REFERENCE_FENS)
