@@ -47,32 +47,44 @@ test_with_chess.py (importorskip chess referee).
 - [x] Step 2 - SAN parse (parse_san w/ full disambiguation; round-trip; cross-check chess)
 - [x] Step 3 - Mate-in-3 search (forced_mate_in_n up to 3, perf-bounded, verified)
 - [x] Step 4 - Verified motif: forks (find_forks, engine-verified double attack + material gain)
-- [ ] Step 5 - Verified motifs: pins & skewers (find_pins/find_skewers, geometric + engine-verified)
+- [x] Step 5 - Verified motifs: pins & skewers (find_pins/find_skewers, geometric + engine-verified)
 - [ ] Step 6 - Difficulty scoring + --difficulty filter (pure, deterministic)
 - [ ] Step 7 - Interactive solve mode + SAN input in the CLI (additive)
 - [ ] Step 8 - Export (PGN + JSON) + golden digest + hostile-input sweep + perf sanity
 - [ ] Step 9 - Docs + version 2.0.0 + final adversarial 3-lens review + merge --no-ff + tag v2.0.0
 
 ## Exact next step
-Step 5 - Verified motifs: pins & skewers (PURE, additive, TDD; in tactics.py). Add
-find_pins(board) + find_skewers(board) using the NEW Board.attacks_from + ray-walking from
-each of the SIDE-TO-MOVE's sliders (B/R/Q). A PIN: a mover's slider ray hits an enemy piece
-(front) with a MORE valuable enemy piece or the KING behind it on the same ray, nothing
-between -> the front piece is pinned (absolute if the KING is behind). A SKEWER: same ray but
-the MORE valuable enemy piece is in FRONT and a lesser one behind (moving the front exposes
-the back). Report a Pin(attacker sq, front sq, back sq, absolute:bool, ...) / Skewer(...).
-VERIFY: for an absolute pin, confirm via legal_moves that the pinned piece truly cannot move
-off the line (python-chess board.is_pinned(color, sq) cross-check). For a skewer/pin that
-WINS material, PROVE it with the existing _forced_gain material search (reuse from forks) -
-only report a winning line-tactic when the material is genuinely won; a refuted one is not
-reported. Cross-check vs python-chess (is_pinned / pin, and gives_check for a skewer-check).
-Fail-loud on bad input. TDD test (extend test_tactics.py): a clean ABSOLUTE pin (a rook pins
-a knight to the king) found + absolute True + python-chess agrees; a SKEWER-check winning the
-piece behind found + proven; a plain line with equal/defended pieces -> none; a refuted skewer
--> not reported. Verify gate. Commit+push, mark [x], set Step 6 (difficulty scoring). NOTE:
-reuse tactics._forced_gain / _quiesce / attacks_from; python-chess board.is_pinned(color, sq)
-+ board.pin(color, sq) are ideal cross-checks for absolute pins. PERF: ray-walk is cheap;
-keep any material proof shallow (1-ply defence + quiescence like forks).
+Step 6 - Difficulty scoring + --difficulty filter (PURE, DETERMINISTIC, additive, TDD). Add
+`difficulty(puzzle) -> {score: float, band: 'easy'|'medium'|'hard', factors: {...}}` in a NEW
+palamedes/difficulty.py (or generator.py) - pure + deterministic (same puzzle -> same score,
+NO wall-clock/random). Factors from the puzzle + engine on Board.from_fen(puzzle['fen']): (a)
+solution length by goal (mate_in_1 << mate_in_2 << mate_in_3; win_material ~ short) - longer =
+harder; (b) branching factor = len(legal_moves()) at the key position (more choices = harder
+to find the key); (c) uniqueness = how many first moves actually SOLVE (fewer unique keys =
+harder); (d) material swing (win_material: bigger swing = easier to spot). Combine into a
+documented score + band with explicit thresholds. Add a `--difficulty easy|medium|hard` CLI
+option that filters generate_puzzle's pool by band (generate_puzzle(goal, seed, difficulty=
+None); if no puzzle matches the (goal, difficulty) -> raise ValueError with a clear message).
+Fail-loud on a malformed puzzle. TDD test_difficulty.py: mate_in_1 scores EASIER than
+mate_in_3; deterministic (same puzzle -> identical score); band thresholds; the CLI/generator
+filter narrows the pool and an impossible filter fails loud; factors are sensible. Verify gate
+(pure scoring, no chess cross-check needed). Commit+push, mark [x], set Step 7 (solve mode +
+SAN input in the CLI). NOTE: keep it DETERMINISTIC and document the formula in the docstring;
+reuse forced_mate_move / legal_moves for the factors.
+
+DONE Step 5 (2026-07-12): tactics.py find_pins(board) + find_skewers(board) (PURE, additive;
+local ray-walk consistent with Board.attacks_from geometry). NEW Pin(attacker, front, back,
+absolute) + Skewer(attacker, front, back). For each side-to-move slider (B/R/Q) walk each ray:
+first enemy = front, next enemy behind = back; back is the enemy KING or value(back) >
+value(front) -> PIN (absolute = back is king); value(front) > value(back) -> SKEWER; equal ->
+neither. Geometric detection, engine-consistent, CROSS-CHECKED vs python-chess (board.is_pinned).
+Re-exported Pin / Skewer / find_pins / find_skewers. TDD test_tactics.py +3: absolute pin
+Rd1->Nd7->Kd8 (3k4/3n4/8/8/8/8/8/3RK3 w) absolute=True; skewer Rd1->Qd5->Rd8
+(3r4/8/8/3q4/8/8/8/3RK2k w); equal-rooks line -> neither. + a python-chess cross-check
+is_pinned(BLACK, D7). Full suite 168 -> 172 in ~3.7s. ruff + mypy strict clean (8 files). NOTE:
+pins/skewers are STATIC geometric motifs (correctness is cross-checked, not a material-win
+claim); the _forced_gain proof is reserved for forks and can be layered onto a skewer-exploit
+MOVE later if a skewer puzzle is wanted.
 
 DONE Step 4 (2026-07-12): NEW palamedes/tactics.py find_forks(board, min_gain=2.0) ->
 list[Fork] = ENGINE-VERIFIED forks (never pattern-matched). NEW Board.attacks_from(sq) ->

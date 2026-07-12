@@ -18,7 +18,7 @@ from .engine import (
 )
 from .fen_bank import all_puzzles, get_puzzle, puzzles_by_goal
 from .generator import derive_mate_in_1, generate_puzzle, render_puzzle
-from .tactics import Fork, find_forks
+from .tactics import Fork, Pin, Skewer, find_forks, find_pins, find_skewers
 from .verifier import net_material_gain, verify_puzzle, verify_solution
 
 __all__ = [
@@ -37,6 +37,10 @@ __all__ = [
     "render_puzzle",
     "Fork",
     "find_forks",
+    "Pin",
+    "Skewer",
+    "find_pins",
+    "find_skewers",
     "net_material_gain",
     "verify_puzzle",
     "verify_solution",
