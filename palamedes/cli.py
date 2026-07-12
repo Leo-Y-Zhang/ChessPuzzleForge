@@ -46,6 +46,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="restrict to a puzzle type (default: any).",
     )
     parser.add_argument(
+        "--difficulty",
+        choices=("easy", "medium", "hard"),
+        help="restrict to a difficulty band (default: any).",
+    )
+    parser.add_argument(
         "--seed",
         type=int,
         default=None,
@@ -110,7 +115,13 @@ def main(argv: list[str] | None = None) -> int:
             print("No mate-in-1 found in that position.", file=sys.stderr)
             return 2
     else:
-        puzzle = generate_puzzle(goal=args.goal, seed=args.seed)
+        try:
+            puzzle = generate_puzzle(
+                goal=args.goal, seed=args.seed, difficulty=args.difficulty
+            )
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
 
     print(render_puzzle(puzzle, reveal=args.reveal))
     if not args.reveal:
