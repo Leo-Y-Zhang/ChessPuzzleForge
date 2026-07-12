@@ -10,13 +10,13 @@ from __future__ import annotations
 
 import pytest
 
+from palamedes.engine import Board, move_to_san
+from palamedes.fen_bank import PUZZLES
+
 # Pass ``exc_type=ImportError`` so pytest skips cleanly when the optional
 # ``python-chess`` package is simply absent, without the default (soon-to-be
 # error in pytest 9.1) PytestDeprecationWarning about catching ImportError.
 chess = pytest.importorskip("chess", exc_type=ImportError)
-
-from palamedes.engine import Board, move_to_san
-from palamedes.fen_bank import PUZZLES
 
 REFERENCE_FENS = [p["fen"] for p in PUZZLES] + [
     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",

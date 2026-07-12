@@ -27,7 +27,6 @@ from __future__ import annotations
 
 import argparse
 import sys
-from typing import List, Optional
 
 from .fen_bank import all_puzzles
 from .generator import generate_puzzle, make_puzzle_from_position, render_puzzle
@@ -92,7 +91,7 @@ def _cmd_verify_all() -> int:
     return 0 if all_ok else 1
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 

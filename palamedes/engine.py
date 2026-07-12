@@ -27,8 +27,8 @@ So a1 == 0, h1 == 7, a8 == 56, h8 == 63.  White pieces are uppercase letters
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable, List, Optional
 
 WHITE = "w"
 BLACK = "b"
@@ -82,7 +82,7 @@ class Move:
 
     from_sq: int
     to_sq: int
-    promotion: Optional[str] = None
+    promotion: str | None = None
     is_ep: bool = False
     is_castle: bool = False
 
@@ -103,10 +103,10 @@ class Board:
 
     def __init__(
         self,
-        squares: List[Optional[str]],
+        squares: list[str | None],
         turn: str,
         castling: str,
-        ep_square: Optional[int],
+        ep_square: int | None,
         halfmove: int = 0,
         fullmove: int = 1,
     ) -> None:
@@ -119,7 +119,7 @@ class Board:
 
     # ------------------------------------------------------------------ FEN
     @classmethod
-    def from_fen(cls, fen: str) -> "Board":
+    def from_fen(cls, fen: str) -> Board:
         parts = fen.strip().split()
         if len(parts) < 2:
             raise ValueError(f"invalid FEN (need at least board and turn): {fen!r}")
@@ -133,7 +133,7 @@ class Board:
         if turn not in (WHITE, BLACK):
             raise ValueError(f"invalid side to move in FEN: {turn!r}")
 
-        squares: List[Optional[str]] = [None] * 64
+        squares: list[str | None] = [None] * 64
         ranks = placement.split("/")
         if len(ranks) != 8:
             raise ValueError(f"invalid FEN board (need 8 ranks): {placement!r}")
@@ -179,10 +179,10 @@ class Board:
         return f"{placement} {self.turn} {castling} {ep} {self.halfmove} {self.fullmove}"
 
     # ---------------------------------------------------------------- lookup
-    def piece_at(self, sq: int) -> Optional[str]:
+    def piece_at(self, sq: int) -> str | None:
         return self.squares[sq]
 
-    def king_square(self, color: str) -> Optional[int]:
+    def king_square(self, color: str) -> int | None:
         king = "K" if color == WHITE else "k"
         for sq in range(64):
             if self.squares[sq] == king:
@@ -230,7 +230,7 @@ class Board:
             while _on_board(nf, nr):
                 p = pieces[square(nf, nr)]
                 if p is not None:
-                    if p == bishop or p == queen:
+                    if p in (bishop, queen):
                         return True
                     break
                 nf, nr = nf + df, nr + dr
@@ -240,14 +240,14 @@ class Board:
             while _on_board(nf, nr):
                 p = pieces[square(nf, nr)]
                 if p is not None:
-                    if p == rook or p == queen:
+                    if p in (rook, queen):
                         return True
                     break
                 nf, nr = nf + df, nr + dr
 
         return False
 
-    def is_check(self, color: Optional[str] = None) -> bool:
+    def is_check(self, color: str | None = None) -> bool:
         color = color or self.turn
         ks = self.king_square(color)
         if ks is None:
@@ -263,10 +263,10 @@ class Board:
         start_rank = 1 if color == WHITE else 6
         promo_rank = 7 if color == WHITE else 0
 
-        def own(p: Optional[str]) -> bool:
+        def own(p: str | None) -> bool:
             return p is not None and piece_color(p) == color
 
-        def enemy(p: Optional[str]) -> bool:
+        def enemy(p: str | None) -> bool:
             return p is not None and piece_color(p) != color
 
         for sq in range(64):
@@ -345,41 +345,49 @@ class Board:
             king_from = square(4, 0)
             if pieces[king_from] != "K":
                 return
-            # King-side (O-O): squares f1, g1 empty; e1,f1,g1 not attacked.
-            if "K" in self.castling and pieces[square(5, 0)] is None and pieces[square(6, 0)] is None:
-                if pieces[square(7, 0)] == "R" and not any(
-                    self.is_attacked_by(square(x, 0), opponent) for x in (4, 5, 6)
-                ):
-                    yield Move(king_from, square(6, 0), is_castle=True)
-            # Queen-side (O-O-O): squares b1,c1,d1 empty; e1,d1,c1 not attacked.
-            if "Q" in self.castling and all(
-                pieces[square(x, 0)] is None for x in (1, 2, 3)
+            # King-side (O-O): f1, g1 empty; e1,f1,g1 not attacked.
+            if (
+                "K" in self.castling
+                and pieces[square(5, 0)] is None
+                and pieces[square(6, 0)] is None
+                and pieces[square(7, 0)] == "R"
+                and not any(self.is_attacked_by(square(x, 0), opponent) for x in (4, 5, 6))
             ):
-                if pieces[square(0, 0)] == "R" and not any(
-                    self.is_attacked_by(square(x, 0), opponent) for x in (4, 3, 2)
-                ):
-                    yield Move(king_from, square(2, 0), is_castle=True)
+                yield Move(king_from, square(6, 0), is_castle=True)
+            # Queen-side (O-O-O): b1,c1,d1 empty; e1,d1,c1 not attacked.
+            if (
+                "Q" in self.castling
+                and all(pieces[square(x, 0)] is None for x in (1, 2, 3))
+                and pieces[square(0, 0)] == "R"
+                and not any(self.is_attacked_by(square(x, 0), opponent) for x in (4, 3, 2))
+            ):
+                yield Move(king_from, square(2, 0), is_castle=True)
         else:
             king_from = square(4, 7)
             if pieces[king_from] != "k":
                 return
-            if "k" in self.castling and pieces[square(5, 7)] is None and pieces[square(6, 7)] is None:
-                if pieces[square(7, 7)] == "r" and not any(
-                    self.is_attacked_by(square(x, 7), opponent) for x in (4, 5, 6)
-                ):
-                    yield Move(king_from, square(6, 7), is_castle=True)
-            if "q" in self.castling and all(
-                pieces[square(x, 7)] is None for x in (1, 2, 3)
+            if (
+                "k" in self.castling
+                and pieces[square(5, 7)] is None
+                and pieces[square(6, 7)] is None
+                and pieces[square(7, 7)] == "r"
+                and not any(self.is_attacked_by(square(x, 7), opponent) for x in (4, 5, 6))
             ):
-                if pieces[square(0, 7)] == "r" and not any(
-                    self.is_attacked_by(square(x, 7), opponent) for x in (4, 3, 2)
-                ):
-                    yield Move(king_from, square(2, 7), is_castle=True)
+                yield Move(king_from, square(6, 7), is_castle=True)
+            if (
+                "q" in self.castling
+                and all(pieces[square(x, 7)] is None for x in (1, 2, 3))
+                and pieces[square(0, 7)] == "r"
+                and not any(self.is_attacked_by(square(x, 7), opponent) for x in (4, 3, 2))
+            ):
+                yield Move(king_from, square(2, 7), is_castle=True)
 
-    def push(self, move: Move) -> "Board":
+    def push(self, move: Move) -> Board:
         """Return a new Board with ``move`` applied.  No legality check here."""
         squares = list(self.squares)
         piece = squares[move.from_sq]
+        if piece is None:
+            raise ValueError(f"no piece on {square_name(move.from_sq)} to move")
         color = piece_color(piece)
         squares[move.from_sq] = None
 
@@ -439,7 +447,10 @@ class Board:
         # En-passant target for a double pawn push.
         ep_square = None
         if piece.upper() == "P" and abs(rank_of(move.to_sq) - rank_of(move.from_sq)) == 2:
-            ep_square = square(file_of(move.from_sq), (rank_of(move.from_sq) + rank_of(move.to_sq)) // 2)
+            ep_square = square(
+                file_of(move.from_sq),
+                (rank_of(move.from_sq) + rank_of(move.to_sq)) // 2,
+            )
 
         # Half-move clock: reset on pawn move or capture.
         captured = self.squares[move.to_sq] is not None or move.is_ep
@@ -449,9 +460,9 @@ class Board:
 
         return Board(squares, turn, castling, ep_square, halfmove, fullmove)
 
-    def legal_moves(self) -> List[Move]:
+    def legal_moves(self) -> list[Move]:
         color = self.turn
-        result: List[Move] = []
+        result: list[Move] = []
         for move in self._pseudo_legal_moves():
             child = self.push(move)
             ks = child.king_square(color)
@@ -573,7 +584,7 @@ def _san_disambiguation(board: Board, move: Move, piece: str) -> str:
     return square_name(move.from_sq)
 
 
-def forced_mate_move(board: Board, depth: int) -> Optional[str]:
+def forced_mate_move(board: Board, depth: int) -> str | None:
     """Return a UCI move that forces mate in at most ``depth`` moves, else None.
 
     ``depth`` counts *moves by the side to move* (a "mate in N").  The search is
