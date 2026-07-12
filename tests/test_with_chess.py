@@ -10,13 +10,14 @@ from __future__ import annotations
 
 import pytest
 
+from palamedes.engine import Board, move_to_san, parse_san
+from palamedes.fen_bank import PUZZLES
+from palamedes.tactics import find_forks, find_pins
+
 # Pass ``exc_type=ImportError`` so pytest skips cleanly when the optional
 # ``python-chess`` package is simply absent, without the default (soon-to-be
 # error in pytest 9.1) PytestDeprecationWarning about catching ImportError.
 chess = pytest.importorskip("chess", exc_type=ImportError)
-
-from palamedes.engine import Board, move_to_san
-from palamedes.fen_bank import PUZZLES
 
 REFERENCE_FENS = [p["fen"] for p in PUZZLES] + [
     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
@@ -43,6 +44,42 @@ def test_san_matches_reference_for_every_legal_move(fen):
             f"SAN mismatch in {fen} for {move.uci()}: "
             f"mine={mine!r} ref={ref_san_by_uci[move.uci()]!r}"
         )
+
+
+@pytest.mark.parametrize("fen", REFERENCE_FENS)
+def test_parse_san_accepts_reference_san(fen):
+    # Feed our parser the SAN produced by the mature reference library and confirm
+    # it resolves to the same move - an independent check of parse_san.
+    ref = chess.Board(fen)
+    board = Board.from_fen(fen)
+    for m in ref.legal_moves:
+        ref_san = ref.san(m)
+        parsed = parse_san(board, ref_san)
+        assert parsed.uci() == m.uci(), (
+            f"parse_san({ref_san!r}) in {fen} -> {parsed.uci()} != {m.uci()}"
+        )
+
+
+def test_find_forks_royal_fork_agrees_with_reference():
+    fen = "4k3/8/8/8/4q1N1/8/8/6K1 w - - 0 1"
+    forks = find_forks(Board.from_fen(fen))
+    assert len(forks) == 1
+    cb = chess.Board(fen)
+    assert cb.is_valid()
+    mv = chess.Move.from_uci(forks[0].uci)
+    assert mv in cb.legal_moves
+    assert cb.gives_check(mv)          # the fork move is a check per the reference
+    cb.push(mv)
+    assert chess.E4 in cb.attacks(chess.F6)  # the knight really attacks the queen
+
+
+def test_find_pins_absolute_pin_agrees_with_reference():
+    fen = "3k4/3n4/8/8/8/8/8/3RK3 w - - 0 1"  # Rd1 pins Nd7 to Kd8
+    pins = find_pins(Board.from_fen(fen))
+    assert len(pins) == 1 and pins[0].absolute
+    cb = chess.Board(fen)
+    assert cb.is_valid()
+    assert cb.is_pinned(chess.BLACK, chess.D7)  # the reference confirms the pin
 
 
 @pytest.mark.parametrize("fen", REFERENCE_FENS)

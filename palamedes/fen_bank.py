@@ -20,9 +20,22 @@ Puzzle schema
 
 from __future__ import annotations
 
-from typing import Dict, List
+from typing import NotRequired, TypedDict
 
-PUZZLES: List[Dict] = [
+
+class Puzzle(TypedDict):
+    """Schema for a bank puzzle (``threshold`` only on win-material puzzles)."""
+
+    id: str
+    fen: str
+    goal: str
+    solution: list[str]
+    san: str
+    theme: str
+    threshold: NotRequired[float]
+
+
+PUZZLES: list[Puzzle] = [
     # ---------------------------------------------------------- mate in one
     {
         "id": "m1-backrank-rook",
@@ -89,6 +102,15 @@ PUZZLES: List[Dict] = [
         "san": "Qh3 (then mate next move)",
         "theme": "queen confinement, mate in two",
     },
+    # ---------------------------------------------------------- mate in three
+    {
+        "id": "m3-two-rook-ladder",
+        "fen": "8/8/8/8/8/6k1/1R6/R5K1 w - - 0 1",
+        "goal": "mate_in_3",
+        "solution": ["b2b4"],
+        "san": "Rb4 (then mate within three)",
+        "theme": "two-rook ladder, mate in three",
+    },
     # ------------------------------------------------------------- tactics
     {
         "id": "tac-hanging-queen",
@@ -102,19 +124,19 @@ PUZZLES: List[Dict] = [
 ]
 
 
-def all_puzzles() -> List[Dict]:
+def all_puzzles() -> list[Puzzle]:
     """Return a shallow copy of the puzzle bank."""
-    return [dict(p) for p in PUZZLES]
+    return [p.copy() for p in PUZZLES]
 
 
-def puzzles_by_goal(goal: str) -> List[Dict]:
+def puzzles_by_goal(goal: str) -> list[Puzzle]:
     """Return the puzzles whose ``goal`` matches ``goal``."""
-    return [dict(p) for p in PUZZLES if p["goal"] == goal]
+    return [p.copy() for p in PUZZLES if p["goal"] == goal]
 
 
-def get_puzzle(puzzle_id: str) -> Dict:
+def get_puzzle(puzzle_id: str) -> Puzzle:
     """Return the puzzle with the given id, or raise ``KeyError``."""
     for p in PUZZLES:
         if p["id"] == puzzle_id:
-            return dict(p)
+            return p.copy()
     raise KeyError(puzzle_id)

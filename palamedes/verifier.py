@@ -12,15 +12,14 @@ None of this depends on ``python-chess``; it is all pure standard library.
 
 from __future__ import annotations
 
-from typing import Dict, Optional, Tuple
-
-from .engine import Board, forced_mate_move, move_from_uci
+from .engine import Board, Move, forced_mate_move, move_from_uci
+from .fen_bank import Puzzle
 
 # Standard material values in pawns; the king is never captured so it is 0.
 PIECE_VALUES = {"P": 1.0, "N": 3.0, "B": 3.0, "R": 5.0, "Q": 9.0, "K": 0.0}
 
 
-def _value(piece: Optional[str]) -> float:
+def _value(piece: str | None) -> float:
     if piece is None:
         return 0.0
     return PIECE_VALUES[piece.upper()]
@@ -55,7 +54,7 @@ def net_material_gain(board: Board, uci: str) -> float:
     return captured_value
 
 
-def verify_solution(puzzle: Dict, uci: str) -> Tuple[bool, str]:
+def verify_solution(puzzle: Puzzle, uci: str) -> tuple[bool, str]:
     """Verify a *single* candidate first move against a puzzle's goal.
 
     Returns ``(ok, message)``.  ``ok`` is True when ``uci`` genuinely achieves
@@ -89,6 +88,16 @@ def verify_solution(puzzle: Dict, uci: str) -> Tuple[bool, str]:
         hint = f" (a forcing move is {found})" if found else ""
         return False, "does not force mate in two" + hint
 
+    if goal == "mate_in_3":
+        found = forced_mate_move(board, 3)
+        child = board.push(move)
+        if child.is_checkmate():
+            return True, "delivers immediate checkmate"
+        if _move_forces_mate(board, move, 3):
+            return True, "forces mate in three"
+        hint = f" (a forcing move is {found})" if found else ""
+        return False, "does not force mate in three" + hint
+
     if goal == "win_material":
         threshold = float(puzzle.get("threshold", 1.0))
         gain = net_material_gain(board, uci)
@@ -99,7 +108,7 @@ def verify_solution(puzzle: Dict, uci: str) -> Tuple[bool, str]:
     return False, f"unknown goal: {goal!r}"
 
 
-def _move_forces_mate(board: Board, move, depth: int) -> bool:
+def _move_forces_mate(board: Board, move: Move, depth: int) -> bool:
     """True if ``move`` (legal in ``board``) forces mate in at most ``depth``."""
     child = board.push(move)
     if child.is_checkmate():
@@ -117,7 +126,7 @@ def _move_forces_mate(board: Board, move, depth: int) -> bool:
     return True
 
 
-def verify_puzzle(puzzle: Dict) -> Tuple[bool, str]:
+def verify_puzzle(puzzle: Puzzle) -> tuple[bool, str]:
     """Verify that *every* listed solution move achieves the puzzle's goal."""
     if not puzzle.get("solution"):
         return False, "puzzle has no solution moves"

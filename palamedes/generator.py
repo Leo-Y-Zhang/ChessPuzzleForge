@@ -16,29 +16,29 @@ Everything here is pure standard library.
 from __future__ import annotations
 
 import random
-from typing import Dict, List, Optional
 
-from .engine import Board, forced_mate_move, move_to_san
-from .fen_bank import all_puzzles, puzzles_by_goal
+from .difficulty import difficulty as _score_difficulty
+from .engine import Board, Move, forced_mate_move, move_to_san
+from .fen_bank import Puzzle, all_puzzles, puzzles_by_goal
 from .verifier import verify_puzzle
 
 
-def _mate_in_1_moves(board: Board) -> List:
+def _mate_in_1_moves(board: Board) -> list[Move]:
     """Return the :class:`Move` objects delivering immediate mate in ``board``."""
     return [m for m in board.legal_moves() if board.push(m).is_checkmate()]
 
 
-def derive_mate_in_1(fen: str) -> List[str]:
+def derive_mate_in_1(fen: str) -> list[str]:
     """Return every move (UCI) that delivers immediate checkmate in ``fen``."""
     return [m.uci() for m in _mate_in_1_moves(Board.from_fen(fen))]
 
 
-def derive_mate_in_2(fen: str) -> Optional[str]:
+def derive_mate_in_2(fen: str) -> str | None:
     """Return one move that forces mate in two (or fewer), or None."""
     return forced_mate_move(Board.from_fen(fen), 2)
 
 
-def make_puzzle_from_position(fen: str, puzzle_id: str = "derived") -> Optional[Dict]:
+def make_puzzle_from_position(fen: str, puzzle_id: str = "derived") -> Puzzle | None:
     """Build a mate-in-1 puzzle by deriving the solution from a raw position.
 
     Returns None if the position has no mate in one.  The ``san`` field carries
@@ -60,10 +60,11 @@ def make_puzzle_from_position(fen: str, puzzle_id: str = "derived") -> Optional[
 
 
 def generate_puzzle(
-    goal: Optional[str] = None,
-    seed: Optional[int] = None,
+    goal: str | None = None,
+    seed: int | None = None,
     validate: bool = True,
-) -> Dict:
+    difficulty: str | None = None,
+) -> Puzzle:
     """Return a random, verified puzzle from the bank.
 
     ``goal`` optionally filters by ``mate_in_1`` / ``mate_in_2`` /
@@ -73,8 +74,10 @@ def generate_puzzle(
     """
     rng = random.Random(seed)
     pool = puzzles_by_goal(goal) if goal else all_puzzles()
+    if difficulty is not None:
+        pool = [p for p in pool if _score_difficulty(p)["band"] == difficulty]
     if not pool:
-        raise ValueError(f"no puzzles available for goal {goal!r}")
+        raise ValueError(f"no puzzles available for goal {goal!r} at difficulty {difficulty!r}")
     puzzle = rng.choice(pool)
     if validate:
         ok, message = verify_puzzle(puzzle)
@@ -83,7 +86,7 @@ def generate_puzzle(
     return puzzle
 
 
-def render_puzzle(puzzle: Dict, reveal: bool = False) -> str:
+def render_puzzle(puzzle: Puzzle, reveal: bool = False) -> str:
     """Return a human-readable, printable rendering of a puzzle."""
     board = Board.from_fen(puzzle["fen"])
     side = "White" if board.turn == "w" else "Black"
