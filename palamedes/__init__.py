@@ -17,6 +17,7 @@ from .engine import (
     parse_san,
     perft,
 )
+from .export import puzzle_to_json, puzzle_to_pgn
 from .fen_bank import all_puzzles, get_puzzle, puzzles_by_goal
 from .generator import derive_mate_in_1, generate_puzzle, render_puzzle
 from .tactics import Fork, Pin, Skewer, find_forks, find_pins, find_skewers
@@ -37,6 +38,8 @@ __all__ = [
     "generate_puzzle",
     "render_puzzle",
     "difficulty",
+    "puzzle_to_json",
+    "puzzle_to_pgn",
     "Fork",
     "find_forks",
     "Pin",
