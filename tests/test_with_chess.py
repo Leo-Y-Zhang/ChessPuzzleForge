@@ -12,7 +12,7 @@ import pytest
 
 from palamedes.engine import Board, move_to_san, parse_san
 from palamedes.fen_bank import PUZZLES
-from palamedes.tactics import find_forks
+from palamedes.tactics import find_forks, find_pins
 
 # Pass ``exc_type=ImportError`` so pytest skips cleanly when the optional
 # ``python-chess`` package is simply absent, without the default (soon-to-be
@@ -71,6 +71,15 @@ def test_find_forks_royal_fork_agrees_with_reference():
     assert cb.gives_check(mv)          # the fork move is a check per the reference
     cb.push(mv)
     assert chess.E4 in cb.attacks(chess.F6)  # the knight really attacks the queen
+
+
+def test_find_pins_absolute_pin_agrees_with_reference():
+    fen = "3k4/3n4/8/8/8/8/8/3RK3 w - - 0 1"  # Rd1 pins Nd7 to Kd8
+    pins = find_pins(Board.from_fen(fen))
+    assert len(pins) == 1 and pins[0].absolute
+    cb = chess.Board(fen)
+    assert cb.is_valid()
+    assert cb.is_pinned(chess.BLACK, chess.D7)  # the reference confirms the pin
 
 
 @pytest.mark.parametrize("fen", REFERENCE_FENS)

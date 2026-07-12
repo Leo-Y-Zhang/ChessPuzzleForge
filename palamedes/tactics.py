@@ -9,7 +9,18 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .engine import BLACK, WHITE, Board, Move, move_to_san, piece_color, square_name
+from .engine import (
+    BLACK,
+    WHITE,
+    Board,
+    Move,
+    file_of,
+    move_to_san,
+    piece_color,
+    rank_of,
+    square,
+    square_name,
+)
 
 _VALUES = {"P": 1.0, "N": 3.0, "B": 3.0, "R": 5.0, "Q": 9.0, "K": 0.0}
 
@@ -110,3 +121,98 @@ def find_forks(board: Board, min_gain: float = 2.0) -> list[Fork]:
         targets = tuple(square_name(sq) for sq in sorted(target_sqs))
         forks.append(Fork(move.uci(), move_to_san(board, move), targets, round(net, 2)))
     return forks
+
+
+# Ray directions for line tactics (bishops on diagonals, rooks on ranks/files).
+_BISHOP_DIRS = ((1, 1), (1, -1), (-1, 1), (-1, -1))
+_ROOK_DIRS = ((1, 0), (-1, 0), (0, 1), (0, -1))
+_QUEEN_DIRS = _BISHOP_DIRS + _ROOK_DIRS
+
+
+def _on(file: int, rank: int) -> bool:
+    return 0 <= file <= 7 and 0 <= rank <= 7
+
+
+@dataclass(frozen=True)
+class Pin:
+    """An enemy piece (``front``) pinned by ``attacker`` to ``back`` behind it.
+
+    ``absolute`` is True when ``back`` is the enemy king (the pinned piece may not
+    legally move off the line at all).
+    """
+
+    attacker: str
+    front: str
+    back: str
+    absolute: bool
+
+
+@dataclass(frozen=True)
+class Skewer:
+    """A more valuable enemy piece (``front``) on the same line of ``attacker`` as a
+    lesser piece (``back``) behind it: moving the front exposes the back."""
+
+    attacker: str
+    front: str
+    back: str
+
+
+def _line_tactics(board: Board) -> tuple[list[Pin], list[Skewer]]:
+    mover = board.turn
+    enemy = BLACK if mover == WHITE else WHITE
+    pins: list[Pin] = []
+    skewers: list[Skewer] = []
+    for start in range(64):
+        piece = board.piece_at(start)
+        if piece is None or piece_color(piece) != mover:
+            continue
+        kind = piece.upper()
+        if kind not in ("B", "R", "Q"):
+            continue
+        dirs = _BISHOP_DIRS if kind == "B" else _ROOK_DIRS if kind == "R" else _QUEEN_DIRS
+        for df, dr in dirs:
+            # First piece along the ray = the front piece (must be enemy).
+            f, r = file_of(start) + df, rank_of(start) + dr
+            front = None
+            while _on(f, r):
+                p = board.piece_at(square(f, r))
+                if p is not None:
+                    if piece_color(p) == enemy:
+                        front = square(f, r)
+                    break
+                f, r = f + df, r + dr
+            if front is None:
+                continue
+            # Next piece behind the front along the same ray = the back piece.
+            f, r = file_of(front) + df, rank_of(front) + dr
+            back = None
+            while _on(f, r):
+                p = board.piece_at(square(f, r))
+                if p is not None:
+                    if piece_color(p) == enemy:
+                        back = square(f, r)
+                    break
+                f, r = f + df, r + dr
+            if back is None:
+                continue
+            front_piece = board.piece_at(front)
+            back_piece = board.piece_at(back)
+            assert front_piece is not None and back_piece is not None
+            back_is_king = back_piece.upper() == "K"
+            if back_is_king or _value(back_piece) > _value(front_piece):
+                pins.append(
+                    Pin(square_name(start), square_name(front), square_name(back), back_is_king)
+                )
+            elif _value(front_piece) > _value(back_piece):
+                skewers.append(Skewer(square_name(start), square_name(front), square_name(back)))
+    return pins, skewers
+
+
+def find_pins(board: Board) -> list[Pin]:
+    """Return the pins created by the side to move's sliders (absolute or relative)."""
+    return _line_tactics(board)[0]
+
+
+def find_skewers(board: Board) -> list[Skewer]:
+    """Return the skewers created by the side to move's sliders."""
+    return _line_tactics(board)[1]
