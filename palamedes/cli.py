@@ -27,10 +27,12 @@ from __future__ import annotations
 
 import argparse
 import sys
+from collections.abc import Callable
 
-from .fen_bank import all_puzzles
+from .engine import Board, Move, move_from_uci, parse_san, parse_square, square_name
+from .fen_bank import Puzzle, all_puzzles
 from .generator import generate_puzzle, make_puzzle_from_position, render_puzzle
-from .verifier import verify_puzzle
+from .verifier import verify_puzzle, verify_solution
 
 GOALS = ("mate_in_1", "mate_in_2", "mate_in_3", "win_material")
 
@@ -60,6 +62,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--reveal",
         action="store_true",
         help="print the solution as well as the position.",
+    )
+    parser.add_argument(
+        "--solve",
+        action="store_true",
+        help="interactive: read your move (SAN or UCI) and check it.",
     )
     parser.add_argument(
         "--fen",
@@ -96,7 +103,50 @@ def _cmd_verify_all() -> int:
     return 0 if all_ok else 1
 
 
-def main(argv: list[str] | None = None) -> int:
+def _read_move(board: Board, raw: str) -> Move | None:
+    """Parse ``raw`` as a legal move, accepting SAN (Qd8#) or UCI (d1d8)."""
+    text = raw.strip()
+    if not text:
+        return None
+    for parse in (parse_san, move_from_uci):
+        try:
+            return parse(board, text)
+        except (ValueError, TypeError):
+            continue
+    return None
+
+
+def _cmd_solve(puzzle: Puzzle, reader: Callable[[str], str]) -> int:
+    print(render_puzzle(puzzle, reveal=False))
+    print("\nEnter your move as SAN (e.g. Qd8#) or UCI (e.g. d1d8):")
+    try:
+        raw = reader("> ")
+    except (EOFError, KeyboardInterrupt):
+        print("\nNo move entered.")
+        return 1
+
+    board = Board.from_fen(puzzle["fen"])
+    move = _read_move(board, raw)
+    if move is None:
+        print(f"{raw.strip()!r} is not a legal move here. Try SAN (Qd8#) or UCI (d1d8).",
+              file=sys.stderr)
+        return 2
+
+    ok, message = verify_solution(puzzle, move.uci())
+    if ok:
+        print(f"Correct! {message}.")
+        return 0
+
+    hint = ""
+    solution = puzzle.get("solution") or []
+    if solution:
+        from_sq = parse_square(solution[0][:2])
+        hint = f" Hint: the key move is by the piece on {square_name(from_sq)}."
+    print(f"Not the solution: {message}.{hint}")
+    return 0
+
+
+def main(argv: list[str] | None = None, reader: Callable[[str], str] = input) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
@@ -122,6 +172,9 @@ def main(argv: list[str] | None = None) -> int:
         except ValueError as exc:
             print(str(exc), file=sys.stderr)
             return 2
+
+    if args.solve:
+        return _cmd_solve(puzzle, reader)
 
     print(render_puzzle(puzzle, reveal=args.reveal))
     if not args.reveal:

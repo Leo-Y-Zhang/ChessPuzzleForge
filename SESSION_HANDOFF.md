@@ -49,26 +49,40 @@ test_with_chess.py (importorskip chess referee).
 - [x] Step 4 - Verified motif: forks (find_forks, engine-verified double attack + material gain)
 - [x] Step 5 - Verified motifs: pins & skewers (find_pins/find_skewers, geometric + engine-verified)
 - [x] Step 6 - Difficulty scoring + --difficulty filter (pure, deterministic)
-- [ ] Step 7 - Interactive solve mode + SAN input in the CLI (additive)
+- [x] Step 7 - Interactive solve mode + SAN input in the CLI (additive)
 - [ ] Step 8 - Export (PGN + JSON) + golden digest + hostile-input sweep + perf sanity
 - [ ] Step 9 - Docs + version 2.0.0 + final adversarial 3-lens review + merge --no-ff + tag v2.0.0
 
 ## Exact next step
-Step 7 - Interactive solve mode + SAN input in the CLI (additive, TDD; keep v1 CLI unchanged).
-Add a `--solve` mode to cli.py: pick/derive a puzzle, print it with the solution HIDDEN, then
-READ one move from stdin and check it with the engine (verify_solution for the puzzle goal),
-printing correct / incorrect + a short hint. Accept the move as SAN (parse_san) OR UCI
-(move_from_uci) - try parse_san first, fall back to move_from_uci; a garbage/illegal move -> a
-CLEAN message + non-zero exit, never a traceback. Make the input INJECTABLE for testing: e.g.
-main(argv, reader=input) or a small helper so test_cli can feed a move without real stdin (mirror
-how other repos inject readers). Back-compat: without --solve everything behaves as before. TDD
-test_cli.py (extend): --solve with the correct SAN key -> "correct" + exit 0; correct via UCI too;
-a wrong legal move -> "incorrect" + a hint + a non-zero-or-zero documented code; an illegal/garbage
-move -> clean fail-loud message, no traceback; the reader is injected (no real stdin). Use a fixed
---seed (or --fen) so the solved puzzle is deterministic in the test. Verify gate. Commit+push, mark
-[x], set Step 8 (export PGN/JSON + golden digest + hostile-input sweep + perf). NOTE: reuse
-parse_san (Step 2) + verify_solution; the CLI main already returns int and parses argv - thread a
-reader param through for testability.
+Step 8 - Export (PGN + JSON) + golden digest + hostile-input sweep + perf sanity (PURE, additive,
+TDD). (a) EXPORT: add puzzle_to_json(puzzle) -> DETERMINISTIC JSON (json.dumps sort_keys) and
+puzzle_to_pgn(puzzle) -> a minimal VALID PGN (FEN + SetUp "1" tags, the solution move(s) in SAN via
+move_to_san, deterministic headers, NO wall-clock/Date unless injected). Put them in a new
+palamedes/export.py (or generator.py); fail-loud (ValueError) on a malformed puzzle. (b) GOLDEN
+DIGEST: test_golden.py pins a sha256 of a canonical DETERMINISTIC artefact - e.g. the concatenated
+puzzle_to_json over all_puzzles() (sorted by id), OR [generate_puzzle(seed=i) for i in range(8)]
+ids+fens. Pin GOLDEN_DIGEST as a constant; regenerate only on an intentional change + say why. (c)
+HOSTILE-INPUT SWEEP: test_hostile.py asserting EVERY public entry fails loud on bad input:
+Board.from_fen (wrong field count / bad piece char / bad side-to-move / bad ranks), move_from_uci
+(malformed + illegal), parse_san (garbage), verify_solution (unknown goal returns (False,..) - ok),
+difficulty (bad puzzle), generate_puzzle (impossible goal/difficulty), puzzle_to_json/pgn (malformed)
+-> ValueError; and the tactics fns (find_forks/pins/skewers) return [] on a bare-king board (no
+crash). Never a traceback. (d) PERF: a bounded check (perft(startpos,3)==8902 within a generous wall
+bound; timing lives in the TEST only, never in outputs). Verify gate. Commit+push, mark [x], set
+Step 9 (docs README/CHANGELOG + version 2.0.0 + final adversarial 3-lens review + merge --no-ff +
+tag). NOTE: keep exports DETERMINISTIC (sort_keys, no/injected timestamp); the golden pins it.
+
+DONE Step 7 (2026-07-12): cli.py interactive --solve mode + SAN input (additive; v1 CLI unchanged).
+main(argv, reader=input) now takes an INJECTABLE reader (testable without real stdin). NEW
+_read_move(board, raw) accepts SAN (parse_san) OR UCI (move_from_uci) - tries parse_san first then
+falls back; None if neither parses. NEW _cmd_solve(puzzle, reader): prints the puzzle solution-
+HIDDEN, reads one move, verifies via verify_solution(puzzle, move.uci()), prints Correct! / Not the
+solution + a HINT (the from-square of the listed key move); an illegal/garbage move -> clean stderr
+message + exit 2 (no traceback); no move (EOF) -> exit 1; correct/incorrect both -> exit 0. --solve
+flag added; composes with --fen or --seed/--goal/--difficulty. TDD test_cli.py +4 (injected reader
+lambda): correct SAN Ra8 -> exit 0 + 'correct'; correct UCI a1a8 -> exit 0; wrong-legal Ra7 -> exit
+0 + 'not the solution' + 'hint'; illegal Qz9 -> exit 2 + 'legal' message. Full suite 178 -> 182,
+ruff + mypy strict clean (9 files).
 
 DONE Step 6 (2026-07-12): NEW palamedes/difficulty.py difficulty(puzzle) -> {score, band, factors}
 (PURE, DETERMINISTIC - no wall-clock / random; param typed Mapping[str,object] so a plain dict or a
