@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from palamedes.engine import Board, move_to_san
+from palamedes.engine import Board, move_to_san, parse_san
 from palamedes.fen_bank import PUZZLES
 
 # Pass ``exc_type=ImportError`` so pytest skips cleanly when the optional
@@ -42,6 +42,20 @@ def test_san_matches_reference_for_every_legal_move(fen):
         assert mine == ref_san_by_uci[move.uci()], (
             f"SAN mismatch in {fen} for {move.uci()}: "
             f"mine={mine!r} ref={ref_san_by_uci[move.uci()]!r}"
+        )
+
+
+@pytest.mark.parametrize("fen", REFERENCE_FENS)
+def test_parse_san_accepts_reference_san(fen):
+    # Feed our parser the SAN produced by the mature reference library and confirm
+    # it resolves to the same move - an independent check of parse_san.
+    ref = chess.Board(fen)
+    board = Board.from_fen(fen)
+    for m in ref.legal_moves:
+        ref_san = ref.san(m)
+        parsed = parse_san(board, ref_san)
+        assert parsed.uci() == m.uci(), (
+            f"parse_san({ref_san!r}) in {fen} -> {parsed.uci()} != {m.uci()}"
         )
 
 
