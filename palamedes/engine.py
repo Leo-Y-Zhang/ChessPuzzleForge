@@ -584,6 +584,20 @@ def _san_disambiguation(board: Board, move: Move, piece: str) -> str:
     return square_name(move.from_sq)
 
 
+def perft(board: Board, depth: int) -> int:
+    """Count leaf nodes of the legal move tree to ``depth`` (a move-gen pin).
+
+    ``perft(board, 0)`` is 1; otherwise it is the sum over every legal move of
+    ``perft(child, depth - 1)``. Matching known reference perft counts is a
+    strong, position-independent check that legal move generation is correct.
+    """
+    if depth < 0:
+        raise ValueError(f"perft depth must be >= 0, got {depth}")
+    if depth == 0:
+        return 1
+    return sum(perft(board.push(move), depth - 1) for move in board.legal_moves())
+
+
 def forced_mate_move(board: Board, depth: int) -> str | None:
     """Return a UCI move that forces mate in at most ``depth`` moves, else None.
 
