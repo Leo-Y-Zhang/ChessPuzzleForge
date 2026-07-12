@@ -84,7 +84,7 @@ def test_move_from_uci_rejects_illegal():
     try:
         move_from_uci(board, "a1a2")  # blocked? a2 is empty, this IS legal
     except ValueError:
-        raise AssertionError("a1a2 should be legal")
+        raise AssertionError("a1a2 should be legal") from None
     try:
         move_from_uci(board, "a1b3")  # rooks do not move diagonally
         raise AssertionError("a1b3 should be illegal")
