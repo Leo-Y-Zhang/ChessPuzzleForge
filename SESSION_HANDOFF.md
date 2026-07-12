@@ -48,29 +48,41 @@ test_with_chess.py (importorskip chess referee).
 - [x] Step 3 - Mate-in-3 search (forced_mate_in_n up to 3, perf-bounded, verified)
 - [x] Step 4 - Verified motif: forks (find_forks, engine-verified double attack + material gain)
 - [x] Step 5 - Verified motifs: pins & skewers (find_pins/find_skewers, geometric + engine-verified)
-- [ ] Step 6 - Difficulty scoring + --difficulty filter (pure, deterministic)
+- [x] Step 6 - Difficulty scoring + --difficulty filter (pure, deterministic)
 - [ ] Step 7 - Interactive solve mode + SAN input in the CLI (additive)
 - [ ] Step 8 - Export (PGN + JSON) + golden digest + hostile-input sweep + perf sanity
 - [ ] Step 9 - Docs + version 2.0.0 + final adversarial 3-lens review + merge --no-ff + tag v2.0.0
 
 ## Exact next step
-Step 6 - Difficulty scoring + --difficulty filter (PURE, DETERMINISTIC, additive, TDD). Add
-`difficulty(puzzle) -> {score: float, band: 'easy'|'medium'|'hard', factors: {...}}` in a NEW
-palamedes/difficulty.py (or generator.py) - pure + deterministic (same puzzle -> same score,
-NO wall-clock/random). Factors from the puzzle + engine on Board.from_fen(puzzle['fen']): (a)
-solution length by goal (mate_in_1 << mate_in_2 << mate_in_3; win_material ~ short) - longer =
-harder; (b) branching factor = len(legal_moves()) at the key position (more choices = harder
-to find the key); (c) uniqueness = how many first moves actually SOLVE (fewer unique keys =
-harder); (d) material swing (win_material: bigger swing = easier to spot). Combine into a
-documented score + band with explicit thresholds. Add a `--difficulty easy|medium|hard` CLI
-option that filters generate_puzzle's pool by band (generate_puzzle(goal, seed, difficulty=
-None); if no puzzle matches the (goal, difficulty) -> raise ValueError with a clear message).
-Fail-loud on a malformed puzzle. TDD test_difficulty.py: mate_in_1 scores EASIER than
-mate_in_3; deterministic (same puzzle -> identical score); band thresholds; the CLI/generator
-filter narrows the pool and an impossible filter fails loud; factors are sensible. Verify gate
-(pure scoring, no chess cross-check needed). Commit+push, mark [x], set Step 7 (solve mode +
-SAN input in the CLI). NOTE: keep it DETERMINISTIC and document the formula in the docstring;
-reuse forced_mate_move / legal_moves for the factors.
+Step 7 - Interactive solve mode + SAN input in the CLI (additive, TDD; keep v1 CLI unchanged).
+Add a `--solve` mode to cli.py: pick/derive a puzzle, print it with the solution HIDDEN, then
+READ one move from stdin and check it with the engine (verify_solution for the puzzle goal),
+printing correct / incorrect + a short hint. Accept the move as SAN (parse_san) OR UCI
+(move_from_uci) - try parse_san first, fall back to move_from_uci; a garbage/illegal move -> a
+CLEAN message + non-zero exit, never a traceback. Make the input INJECTABLE for testing: e.g.
+main(argv, reader=input) or a small helper so test_cli can feed a move without real stdin (mirror
+how other repos inject readers). Back-compat: without --solve everything behaves as before. TDD
+test_cli.py (extend): --solve with the correct SAN key -> "correct" + exit 0; correct via UCI too;
+a wrong legal move -> "incorrect" + a hint + a non-zero-or-zero documented code; an illegal/garbage
+move -> clean fail-loud message, no traceback; the reader is injected (no real stdin). Use a fixed
+--seed (or --fen) so the solved puzzle is deterministic in the test. Verify gate. Commit+push, mark
+[x], set Step 8 (export PGN/JSON + golden digest + hostile-input sweep + perf). NOTE: reuse
+parse_san (Step 2) + verify_solution; the CLI main already returns int and parses argv - thread a
+reader param through for testability.
+
+DONE Step 6 (2026-07-12): NEW palamedes/difficulty.py difficulty(puzzle) -> {score, band, factors}
+(PURE, DETERMINISTIC - no wall-clock / random; param typed Mapping[str,object] so a plain dict or a
+Puzzle both work + runtime isinstance guards). Formula (documented): score = 8*depth +
+0.4*branching + 0.3*rarity, where depth = mate_in_N -> N / win_material -> 1, branching =
+len(legal_moves at the key FEN), rarity = branching - number of listed solving moves. Bands:
+easy < 22, medium < 30, else hard (calibrated on the bank -> 4 easy / 3 medium / 3 hard; the
+formula PRESERVES depth ordering: every mate_in_1 < every mate_in_2 < the mate_in_3). Fail-loud:
+non-string fen/goal or unknown goal -> ValueError. generate_puzzle(goal, seed, validate,
+difficulty=None) filters the pool by band, and no match -> ValueError with a clear message. cli
+--difficulty easy|medium|hard added + wired + the ValueError handled (stderr + exit 2). Re-exported
+difficulty. TDD test_difficulty.py (6): deeper mate scores harder (m1<m2<m3); deterministic; band
+membership; fail-loud on a bad puzzle; the filter returns that band; an impossible filter (mate_in_3
++ easy) fails loud. Full suite 172 -> 178, ruff + mypy strict clean (9 files).
 
 DONE Step 5 (2026-07-12): tactics.py find_pins(board) + find_skewers(board) (PURE, additive;
 local ray-walk consistent with Board.attacks_from geometry). NEW Pin(attacker, front, back,

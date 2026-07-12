@@ -7,6 +7,7 @@ Public API re-exports for convenience::
 
 from __future__ import annotations
 
+from .difficulty import difficulty
 from .engine import (
     Board,
     Move,
@@ -35,6 +36,7 @@ __all__ = [
     "derive_mate_in_1",
     "generate_puzzle",
     "render_puzzle",
+    "difficulty",
     "Fork",
     "find_forks",
     "Pin",
