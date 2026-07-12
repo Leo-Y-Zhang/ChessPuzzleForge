@@ -102,6 +102,15 @@ PUZZLES: list[Puzzle] = [
         "san": "Qh3 (then mate next move)",
         "theme": "queen confinement, mate in two",
     },
+    # ---------------------------------------------------------- mate in three
+    {
+        "id": "m3-two-rook-ladder",
+        "fen": "8/8/8/8/8/6k1/1R6/R5K1 w - - 0 1",
+        "goal": "mate_in_3",
+        "solution": ["b2b4"],
+        "san": "Rb4 (then mate within three)",
+        "theme": "two-rook ladder, mate in three",
+    },
     # ------------------------------------------------------------- tactics
     {
         "id": "tac-hanging-queen",

@@ -45,7 +45,7 @@ test_with_chess.py (importorskip chess referee).
 - [x] Step 0 - Tooling: pyproject (ruff E/F/W/I/UP/B/SIM + mypy --strict) + CI lint/type + baseline test
 - [x] Step 1 - Perft correctness harness (perft(board,depth) + known-value reference table)
 - [x] Step 2 - SAN parse (parse_san w/ full disambiguation; round-trip; cross-check chess)
-- [ ] Step 3 - Mate-in-3 search (forced_mate_in_n up to 3, perf-bounded, verified)
+- [x] Step 3 - Mate-in-3 search (forced_mate_in_n up to 3, perf-bounded, verified)
 - [ ] Step 4 - Verified motif: forks (find_forks, engine-verified double attack + material gain)
 - [ ] Step 5 - Verified motifs: pins & skewers (find_pins/find_skewers, geometric + engine-verified)
 - [ ] Step 6 - Difficulty scoring + --difficulty filter (pure, deterministic)
@@ -54,22 +54,41 @@ test_with_chess.py (importorskip chess referee).
 - [ ] Step 9 - Docs + version 2.0.0 + final adversarial 3-lens review + merge --no-ff + tag v2.0.0
 
 ## Exact next step
-Step 3 - Mate-in-3 (PURE, additive, TDD). GOOD NEWS: engine.forced_mate_move(board, depth)
-is ALREADY general-depth (its _forces_mate_after_reply recursion counts mover's moves), so
-forced_mate_move(board, 3) already finds a move forcing mate in <=3 - CONFIRM with tests,
-don't rewrite. Work: (a) add >=1 VERIFIED mate-in-3 position to fen_bank (goal "mate_in_3";
-solution UCI; SAN; theme) - VERIFY it with the engine before committing (forced_mate_move
-finds it AND every defence loses in <=3). (b) verifier.verify_solution: add a "mate_in_3"
-branch (reuse _move_forces_mate(board, move, 3)); verify_puzzle already loops solutions.
-(c) generator: mate_in_3 flows through generate_puzzle/puzzles_by_goal automatically once
-banked; maybe add derive_mate_in_3(fen) using forced_mate_move(_,3). (d) CLI --goal already
-takes the goal string; ensure mate_in_3 is accepted (cli may hardcode choices - check
-cli.py argparse choices and add mate_in_3). TDD test_mate3.py: a known mate-in-3 -> solver
-finds a forcing move + _move_forces_mate(...,3) True; a no-mate position -> None; monotone
-(a mate-in-1 is also found at depth 3); the new bank puzzle verifies. Cross-check the
-mate-in-3 vs python-chess (_can_force_mate in test_with_chess). PERF: keep mate positions
-SPARSE (forced_mate at depth 3 is exponential in branching; endgame positions only). Verify
-gate. Commit+push, mark [x], set Step 4 (verified forks).
+Step 4 - Verified motif: forks (PURE, additive, TDD) - the hardest/most distinctive step;
+keep the verification STRICT (an engine-PROVEN material win, never a pattern guess). Add a
+NEW palamedes/tactics.py with `find_forks(board) -> list[...]`: a move by the side to move
+that, once played, ATTACKS >= 2 enemy targets (a piece + the king = royal fork, or >= 2
+pieces) such that the opponent cannot save the material, netting a material win VERIFIED by
+the engine. Approach per legal move m: push; find the moved piece's attacks on enemy pieces
+(reuse the engine's attack logic / is_attacked_by / a squares-attacked helper); require >= 2
+worthwhile targets; then PROVE the win with a short search - e.g. over the opponent's best
+reply, the attacker still wins material (extend the net_material_gain idea, or a 2-3 ply
+minimax on material). Return a small record: move (UCI + SAN), forked target squares, and
+the proven material gain. HONESTY: only report a fork that genuinely wins. Cross-check a
+known knight/royal fork vs python-chess (the attacked squares after the move). Optionally
+add a fork puzzle to fen_bank (theme 'fork', goal 'win_material' or a new goal). Fail-loud on
+bad FEN. TDD test_tactics.py: a clean royal knight fork winning the queen -> found with the
+right move + targets + gain; a quiet position -> []; a FAKE fork where the opponent defends/
+recaptures and does NOT lose material -> NOT reported. Verify gate. Commit+push, mark [x],
+set Step 5 (pins & skewers). PERF: the whole-board scan x a short per-move search can be
+heavy - keep the proof shallow (2-3 ply) and test on sparse positions; watch suite runtime
+(mate-in-3 already pushed it to ~5s).
+
+DONE Step 3 (2026-07-12): mate-in-3. CONFIRMED engine.forced_mate_move is ALREADY
+general-depth (finds a forced mate-in-3; no rewrite needed). Added a VERIFIED bank puzzle
+m3-two-rook-ladder (FEN 8/8/8/8/8/6k1/1R6/R5K1 w - -, key Rb4 = b2b4, two-rook ladder), found
+empirically via an engine scan: forced_mate_move(2)=None AND forced_mate_move(3)=Rb4 AND
+_move_forces_mate(Rb4,3)=True AND NOT _move_forces_mate(Rb4,2) => genuinely mate-in-3;
+python-chess is_valid. verifier.verify_solution += a "mate_in_3" branch (reuses
+_move_forces_mate(...,3)). cli.GOALS += "mate_in_3" (so --goal mate_in_3 and generate_puzzle
+/ --verify-all flow through). NEW tests/test_mate3.py (6): forced mate-in-3 found +
+_move_forces_mate(3); genuinely-3-not-2; monotone (mate-in-1 also found at depth 3);
+bare-kings -> None; verifier branch; bank puzzle verifies. The new puzzle's FEN auto-joins
+test_with_chess REFERENCE_FENS so it is ALSO cross-checked vs python-chess (legal moves / SAN
+/ check / parse_san). --verify-all passes ALL puzzles. Full suite 152 -> 164 (now ~5s: the
+depth-3 searches cost more). ruff + mypy strict clean. NOTE: K+Q vs K rarely gives exactly-
+forced-mate-in-3 (mostly <=2 or the king escapes); TWO-ROOK ladder positions are the reliable
+source (used an engine scan over K+R+R-vs-K to find one).
 
 DONE Step 2 (2026-07-12): engine.parse_san(board, san) -> Move NEW (the inverse of
 move_to_san). Component parser: strip trailing +/#; castling O-O / O-O-O (0-0 tolerated);

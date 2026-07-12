@@ -88,6 +88,16 @@ def verify_solution(puzzle: Puzzle, uci: str) -> tuple[bool, str]:
         hint = f" (a forcing move is {found})" if found else ""
         return False, "does not force mate in two" + hint
 
+    if goal == "mate_in_3":
+        found = forced_mate_move(board, 3)
+        child = board.push(move)
+        if child.is_checkmate():
+            return True, "delivers immediate checkmate"
+        if _move_forces_mate(board, move, 3):
+            return True, "forces mate in three"
+        hint = f" (a forcing move is {found})" if found else ""
+        return False, "does not force mate in three" + hint
+
     if goal == "win_material":
         threshold = float(puzzle.get("threshold", 1.0))
         gain = net_material_gain(board, uci)
