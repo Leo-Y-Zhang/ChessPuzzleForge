@@ -27,6 +27,9 @@ htmlcov/
 *.sqlite
 *.sqlite3
 
+# Mining output from the README examples
+mined.jsonl
+
 # Node (not used, but kept per project convention)
 node_modules/
 

@@ -20,7 +20,8 @@ Puzzle types:
   accounting for the opponent's best recapture
 - **Tactics** — forks (engine-proven), pins, and skewers, exposed via the API
 - **Mined from your games** — `--mine games.pgn` replays a PGN file and emits
-  the verified mates and forks it finds along the mainlines (new in v2.1)
+  the verified mates and forks it finds along the mainlines (new in v2.1; see
+  [Mining a real game](#mining-a-real-game) for a live session)
 
 Each puzzle carries a position (FEN), the side to move, the solution move(s) in
 UCI notation, a human-readable SAN, and an ASCII board rendering.
@@ -134,6 +135,51 @@ FEN: 6k1/8/6K1/8/8/8/8/3Q4 w - - 0 1
 
 Solution: Qd8#  (UCI: d1d8)
 ```
+
+## Mining a real game
+
+`tests/data/opera_game.pgn` is Morphy's 1858 Opera game (33 plies, full 32-man
+positions). Mining it end to end:
+
+```bash
+python -m palamedes --mine tests/data/opera_game.pgn > mined.jsonl
+```
+
+Progress goes to stderr:
+
+```
+game 1/1: replayed 33 plies, 3 new puzzles (3 total)
+Mined 3 verified puzzles.
+```
+
+and `mined.jsonl` now holds the game's famous finish as three puzzles — the
+exchange-winning bishop check, the queen-sacrifice mate in two, and the final
+rook mate:
+
+```json
+{"fen": "4kb1r/p2r1ppp/4qn2/1B2p1B1/4P3/1Q6/PPP2PPP/2KR4 w k - 2 15", "goal": "win_material", "id": "mined-g1-p28-fork", "san": "Bxd7+", "solution": ["b5d7"], "theme": "mined bishop fork", "threshold": 2.0}
+{"fen": "4kb1r/p2n1ppp/4q3/4p1B1/4P3/1Q6/PPP2PPP/2KR4 w k - 0 16", "goal": "mate_in_2", "id": "mined-g1-p30-m2", "san": "Qb8+ (then mate next move)", "solution": ["b3b8"], "theme": "mined mate-in-two"}
+{"fen": "1n2kb1r/p4ppp/4q3/4p1B1/4P3/8/PPP2PPP/2KR4 w k - 0 17", "goal": "mate_in_1", "id": "mined-g1-p32-m1", "san": "Rd8#", "solution": ["d1d8"], "theme": "mined mate-in-one"}
+```
+
+Every line above was re-proven through `verify_puzzle` before it was emitted:
+the miner only discovers candidates, the engine proves them. The whole command
+takes about half a second measured locally on Python 3.13 (about 0.3 s of
+mining; the rest is interpreter startup). Two deliberate design rules keep the
+output trustworthy:
+
+- **Mainline only.** Parenthesised variations are skipped by design, so every
+  puzzle comes from a position that actually occurred in the game.
+- **Fail loud.** Malformed PGN never degrades into a silently wrong replay.
+  The reader names the game and move, and the CLI exits nonzero — here on a
+  file whose fourth move is illegal:
+
+  ```
+  $ python -m palamedes --mine broken.pgn
+  Mining failed: game 1: move 4 ('Kd4') does not name a legal move: no legal move matches SAN 'Kd4'
+  $ echo $?
+  2
+  ```
 
 ## Tests
 
