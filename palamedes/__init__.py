@@ -22,6 +22,7 @@ from .fen_bank import all_puzzles, get_puzzle, puzzles_by_goal
 from .generator import derive_mate_in_1, generate_puzzle, render_puzzle
 from .miner import mine_games, mine_pgn
 from .pgn import PgnError, PgnGame, read_games
+from .synth import parse_piece_set, synthesize_puzzle, synthesize_puzzles
 from .tactics import Fork, Pin, Skewer, find_forks, find_pins, find_skewers
 from .verifier import net_material_gain, verify_puzzle, verify_solution
 
@@ -47,6 +48,9 @@ __all__ = [
     "read_games",
     "mine_games",
     "mine_pgn",
+    "parse_piece_set",
+    "synthesize_puzzle",
+    "synthesize_puzzles",
     "Fork",
     "find_forks",
     "Pin",

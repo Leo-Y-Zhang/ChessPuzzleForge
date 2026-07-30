@@ -25,6 +25,10 @@ List every puzzle in the bank::
 Mine verified puzzles from the games in a PGN file (JSON lines on stdout)::
 
     python -m palamedes --mine games.pgn --max-games 100 > mined.jsonl
+
+Synthesize a fresh, verified mate-in-2 from a bounded piece set::
+
+    python -m palamedes --synth KRK --seed 7 --reveal
 """
 
 from __future__ import annotations
@@ -39,9 +43,11 @@ from .export import puzzle_to_json
 from .fen_bank import Puzzle, all_puzzles
 from .generator import generate_puzzle, make_puzzle_from_position, render_puzzle
 from .miner import mine_pgn
+from .synth import DEFAULT_MAX_TRIES, synthesize_puzzles
 from .verifier import verify_puzzle, verify_solution
 
 GOALS = ("mate_in_1", "mate_in_2", "mate_in_3", "win_material")
+_SYNTH_DEPTHS = {"mate_in_1": 1, "mate_in_2": 2, "mate_in_3": 3}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -106,6 +112,28 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=None,
         help="with --mine: replay at most this many plies of each game.",
+    )
+    parser.add_argument(
+        "--synth",
+        metavar="PIECES",
+        help="synthesize a fresh, engine-verified mate puzzle from this bounded "
+        "piece set (K plus 1-3 of QRBN plus the bare black king, e.g. KQK, KRK, "
+        "KRRK); composes with --goal mate_in_1|mate_in_2|mate_in_3 (default "
+        "mate_in_2) and --seed.",
+    )
+    parser.add_argument(
+        "--count",
+        type=int,
+        default=None,
+        help="with --synth: emit this many distinct puzzles as JSON lines "
+        "instead of rendering one.",
+    )
+    parser.add_argument(
+        "--tries",
+        type=int,
+        default=None,
+        help="with --synth: sample at most this many positions before giving up "
+        f"(default {DEFAULT_MAX_TRIES}).",
     )
     return parser
 
@@ -202,6 +230,15 @@ def main(argv: list[str] | None = None, reader: Callable[[str], str] = input) ->
 
     if (args.max_games is not None or args.max_plies is not None) and not args.mine:
         parser.error("--max-games and --max-plies require --mine")
+    if (args.count is not None or args.tries is not None) and not args.synth:
+        parser.error("--count and --tries require --synth")
+    if args.synth:
+        if args.mine or args.fen:
+            parser.error("--synth cannot be combined with --mine or --fen")
+        if args.difficulty:
+            parser.error("--difficulty filters the bank; it does not apply to --synth")
+        if args.goal is not None and args.goal not in _SYNTH_DEPTHS:
+            parser.error("--synth generates mate puzzles; use --goal mate_in_1|mate_in_2|mate_in_3")
 
     if args.list:
         return _cmd_list()
@@ -210,15 +247,36 @@ def main(argv: list[str] | None = None, reader: Callable[[str], str] = input) ->
     if args.mine:
         return _cmd_mine(args.mine, args.max_games, args.max_plies)
 
-    if args.fen:
+    if args.synth:
+        # Default to mate in 2: deep enough to be a real puzzle, cheap to find.
+        mate_in = _SYNTH_DEPTHS[args.goal or "mate_in_2"]
         try:
-            puzzle = make_puzzle_from_position(args.fen)
+            puzzles = synthesize_puzzles(
+                args.synth,
+                mate_in=mate_in,
+                count=args.count if args.count is not None else 1,
+                seed=args.seed,
+                max_tries=args.tries if args.tries is not None else DEFAULT_MAX_TRIES,
+            )
+        except ValueError as exc:
+            print(f"Synthesis failed: {exc}", file=sys.stderr)
+            return 2
+        if args.count is not None:
+            for p in puzzles:
+                print(puzzle_to_json(p))
+            print(f"Synthesized {len(puzzles)} verified puzzles.", file=sys.stderr)
+            return 0
+        puzzle = puzzles[0]
+    elif args.fen:
+        try:
+            derived = make_puzzle_from_position(args.fen)
         except ValueError as exc:
             print(f"Invalid FEN: {exc}", file=sys.stderr)
             return 2
-        if puzzle is None:
+        if derived is None:
             print("No mate-in-1 found in that position.", file=sys.stderr)
             return 2
+        puzzle = derived
     else:
         try:
             puzzle = generate_puzzle(
