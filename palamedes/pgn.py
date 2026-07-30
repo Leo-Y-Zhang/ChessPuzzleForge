@@ -1,9 +1,10 @@
 """A mainline PGN reader - pure standard library, fail-loud.
 
 Reads Portable Game Notation well enough to replay games: tag-pair headers
-(``[Event "..."]``), movetext with move numbers, brace comments ``{...}``,
-semicolon rest-of-line comments, numeric annotation glyphs (``$12``), game
-results (``1-0`` / ``0-1`` / ``1/2-1/2`` / ``*``), and multiple games per file.
+(``[Event "..."]``), movetext with move numbers (spaced ``1. e4`` or glued
+ChessBase-style ``1.e4`` / ``2...Nc6``), brace comments ``{...}``, semicolon
+rest-of-line comments, numeric annotation glyphs (``$12``), game results
+(``1-0`` / ``0-1`` / ``1/2-1/2`` / ``*``), and multiple games per file.
 
 **Mainline only**: parenthesised recursive annotation variations are skipped
 (including nested ones, and comments inside them); their contents are not
@@ -28,7 +29,11 @@ _SAN_SHAPE = re.compile(
     r"(O-O(-O)?[+#]?|0-0(-0)?[+#]?|[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](=[QRBN])?[+#]?)$"
 )
 # A move-number token: digits with any number of trailing periods (1. / 2... / 3).
-_MOVE_NUMBER = re.compile(r"\d+\.*$")
+# A real move number never starts with 0, so a nonstandard all-digit token like
+# a "00" castling attempt fails loud instead of silently desyncing the replay.
+_MOVE_NUMBER = re.compile(r"[1-9]\d*\.*$")
+# A move number glued to its SAN with no space (ChessBase-style 1.e4 / 2...Nc6).
+_GLUED_MOVE_NUMBER = re.compile(r"[1-9]\d*\.+")
 _TAG_PAIR = re.compile(r'\[\s*(\w+)\s+"((?:[^"\\]|\\.)*)"\s*\]')
 
 
@@ -166,7 +171,11 @@ def _read_movetext(scanner: _Scanner, game_number: int) -> tuple[tuple[str, ...]
                 continue
             if _MOVE_NUMBER.match(token) or set(token) == {"."}:
                 continue  # move-number decoration (1. / 2... / a bare ...)
-            san = token.rstrip("!?")
+            san = token
+            glued = _GLUED_MOVE_NUMBER.match(san)
+            if glued is not None:
+                san = san[glued.end():]  # 1.e4 -> e4, 2...Nc6 -> Nc6
+            san = san.rstrip("!?")
             if not san or not _SAN_SHAPE.match(san):
                 raise _error(game_number, line, f"unrecognised movetext token {token!r}")
             moves.append(san)
@@ -181,6 +190,11 @@ def read_games(text: str) -> list[PgnGame]:
         if scanner.eof():
             return games
         game_number = len(games) + 1
+        line = scanner.line
         tags = _read_tag_pairs(scanner, game_number)
         moves, result = _read_movetext(scanner, game_number)
+        if not tags and not moves:
+            # A stray trailing result token would otherwise become a phantom
+            # empty game (e.g. '1. e4 * 1-0' parsing as two games).
+            raise _error(game_number, line, f"stray result {result!r} with no tags and no moves")
         games.append(PgnGame(game_number=game_number, tags=tags, moves=moves, result=result))
