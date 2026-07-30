@@ -1,8 +1,13 @@
 """Verified tactics: a fork is reported ONLY if the engine PROVES it wins material.
 
 The key honesty test is that a refuted "fork" (the opponent captures the forking
-piece, or otherwise saves the material) is NOT reported.
+piece, or otherwise saves the material) is NOT reported.  The proof search is
+bounded: it must terminate fast even on a full 32-man middlegame board, and a
+candidate whose proof cannot finish within the node budget is NOT reported
+(soundness over recall).
 """
+
+import time
 
 from palamedes.engine import Board
 from palamedes.tactics import find_forks, find_pins, find_skewers
@@ -32,6 +37,29 @@ def test_refuted_fork_is_not_reported():
 
 def test_quiet_position_has_no_forks():
     assert find_forks(Board.from_fen(QUIET)) == []
+
+
+# After 1. e4 e6 2. e5 d5 3. Nf3 c5 4. Be2 Nc6 5. O-O: a routine 32-man opening
+# position with double-attack candidates (e.g. ...Nd4 hits Be2 and Nf3) that are
+# all refutable.  The unbounded capture search used to take 15+ minutes here.
+MIDDLEGAME_32_MEN = "r1bqkbnr/pp3ppp/2n1p3/2ppP3/8/5N2/PPPPBPPP/RNBQ1RK1 b kq - 3 5"
+
+
+def test_find_forks_terminates_fast_on_a_full_middlegame_board():
+    board = Board.from_fen(MIDDLEGAME_32_MEN)
+    start = time.perf_counter()
+    forks = find_forks(board)
+    elapsed = time.perf_counter() - start
+    assert forks == []  # every double-attack candidate here is refutable
+    assert elapsed < 10.0, f"find_forks unexpectedly slow: {elapsed:.2f}s"
+
+
+def test_fork_whose_proof_exceeds_the_node_budget_is_not_reported():
+    # With no budget at all, the royal fork cannot be PROVEN, so it is not
+    # reported - the search fails toward silence, never toward a false claim.
+    assert find_forks(Board.from_fen(ROYAL_FORK), max_nodes=0) == []
+    # With the default budget the same fork is proven and reported.
+    assert len(find_forks(Board.from_fen(ROYAL_FORK))) == 1
 
 
 # White Rd1 pins the black knight d7 to the black king d8 (absolute pin).
