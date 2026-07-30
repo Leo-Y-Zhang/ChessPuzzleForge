@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import time
+
 from palamedes.engine import Board
 from palamedes.fen_bank import get_puzzle
 from palamedes.verifier import (
@@ -67,3 +69,19 @@ def test_verify_puzzle_full_bank_entries():
     for pid in ("m1-two-rooks", "m1-smothered", "m2-queen-confine-b"):
         ok, msg = verify_puzzle(get_puzzle(pid))
         assert ok, f"{pid}: {msg}"
+
+
+def test_mate_in_2_on_a_full_board_verifies_the_candidate_without_a_full_scan():
+    # The Opera game's 16. Qb8+ position (21 men): a correct candidate must
+    # verify by checking THAT candidate only - the exhaustive whole-position
+    # search runs solely to build the hint after a failure.
+    puzzle = {
+        "fen": "4kb1r/p2n1ppp/4q3/4p1B1/4P3/1Q6/PPP2PPP/2KR4 w k - 0 16",
+        "goal": "mate_in_2",
+        "solution": ["b3b8"],
+    }
+    start = time.perf_counter()
+    ok, msg = verify_solution(puzzle, "b3b8")
+    elapsed = time.perf_counter() - start
+    assert ok, msg
+    assert elapsed < 5.0, f"verifying a correct mate-in-2 unexpectedly slow: {elapsed:.2f}s"

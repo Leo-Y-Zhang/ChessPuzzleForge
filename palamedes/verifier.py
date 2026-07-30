@@ -77,24 +77,26 @@ def verify_solution(puzzle: Puzzle, uci: str) -> tuple[bool, str]:
         return False, "does not deliver checkmate"
 
     if goal == "mate_in_2":
-        found = forced_mate_move(board, 2)
-        # `found` is *a* forcing move; confirm the candidate also forces mate.
         child = board.push(move)
         if child.is_checkmate():
             return True, "delivers immediate checkmate"
         # For the candidate specifically, verify it forces mate in <= 2.
         if _move_forces_mate(board, move, 2):
             return True, "forces mate in two"
+        # Only on failure search for *a* forcing move as a hint: the success
+        # path stays cheap even on a full board (the exhaustive whole-position
+        # search runs only to explain a wrong answer).
+        found = forced_mate_move(board, 2)
         hint = f" (a forcing move is {found})" if found else ""
         return False, "does not force mate in two" + hint
 
     if goal == "mate_in_3":
-        found = forced_mate_move(board, 3)
         child = board.push(move)
         if child.is_checkmate():
             return True, "delivers immediate checkmate"
         if _move_forces_mate(board, move, 3):
             return True, "forces mate in three"
+        found = forced_mate_move(board, 3)
         hint = f" (a forcing move is {found})" if found else ""
         return False, "does not force mate in three" + hint
 
