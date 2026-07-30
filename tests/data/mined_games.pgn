@@ -1,0 +1,40 @@
+[Event "Fixture A: castle then back-rank"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "1"]
+[White "?"]
+[Black "?"]
+[Result "1-0"]
+[SetUp "1"]
+[FEN "6k1/6pp/8/8/8/8/6PP/4K2R w K - 0 1"]
+
+1. O-O {castles short} (1. Kf1 $2 Kf7) 1... Kh8 $6 2. Rf8# 1-0
+
+[Event "Fixture B: promotion mate, queen or rook"]
+[Result "1-0"]
+[SetUp "1"]
+[FEN "r5k1/1P3ppp/8/8/8/8/5PPP/6K1 w - - 0 1"]
+
+1. bxa8=Q# 1-0
+
+[Event "Fixture C: pawn-grab knight fork"]
+[Result "1-0"]
+[SetUp "1"]
+[FEN "6k1/3r3p/2q3p1/4p3/8/5N2/5PPP/5RK1 w - - 0 1"]
+
+1. Nxe5! Qc7 2. Nxd7 Qxd7 1-0
+
+[Event "Fixture D: two-rook ladder"]
+[Result "1-0"]
+[SetUp "1"]
+[FEN "8/8/8/8/8/6k1/1R6/R5K1 w - - 0 1"]
+
+; the bank m3 position, played out to mate
+1. Rb4 Kh3 2. Rab1 Kg3 3. R1b3# 1-0
+
+[Event "Fixture E: queen confinement"]
+[Result "1-0"]
+[SetUp "1"]
+[FEN "8/8/8/8/8/3Q4/k7/2K5 w - - 0 1"]
+
+1. Kc2 Ka1 2. Qa6# 1-0
