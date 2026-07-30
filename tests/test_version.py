@@ -9,7 +9,7 @@ PYPROJECT = Path(__file__).resolve().parents[1] / "pyproject.toml"
 
 
 def test_version_is_the_current_release():
-    assert palamedes.__version__ == "2.1.0"
+    assert palamedes.__version__ == "2.1.1"
 
 
 def test_pyproject_version_matches_package():

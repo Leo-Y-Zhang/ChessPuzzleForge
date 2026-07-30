@@ -7,6 +7,55 @@ from a static answer key.
 The format follows [Keep a Changelog](https://keepachangelog.com/); this project
 uses [Semantic Versioning](https://semver.org/).
 
+## [2.1.1] - 2026-07-30
+
+Mining now handles real games at real speed. The 2.1.0 pipeline was measured
+stalling for 15+ minutes on a single ordinary 32-man opening position (an
+unbounded all-captures search behind `find_forks`); every search the miner
+runs is now bounded, and a realistic full-length game fixture pins both the
+speed and the exact output.
+
+### Fixed
+
+- **`find_forks` no longer hangs on full boards.** The fork proof is now a
+  fail-soft alpha-beta capture search (captures ordered by falling victim
+  value) under a hard node budget shared across the call. With a full window
+  it returns exactly the same values as the old plain negamax — the pinned
+  royal-fork and refuted-fork results are unchanged — but the position after
+  1\. e4 e6 2. e5 d5 3. Nf3 c5 4. Be2 Nc6 5. O-O now takes about a
+  millisecond instead of 15+ minutes. A candidate whose proof does not
+  complete within the budget is treated as unproven and NOT reported
+  (soundness over recall), so `find_forks` terminates in bounded time on any
+  input.
+- **The miner's depth-2 mate search is bounded on large boards.** At more
+  than 8 men it now scans only checking key moves that leave the defender at
+  most 4 replies, confirming each reply with a mate-in-1 scan; the full-width
+  `forced_mate_move` search (which also catches quiet key moves) still runs
+  in small positions. The recall trade — a quiet-key mate in 2 at 11 men is
+  real but not emitted — is pinned by a test.
+- **`verify_solution` computes the mate-goal failure hint lazily.** A correct
+  mate-in-2/3 candidate is verified by checking that candidate alone, so
+  re-verifying mined candidates stays cheap on full boards; the exhaustive
+  whole-position search now runs only to explain a wrong answer. Messages
+  are unchanged.
+- **CLI `--mine` file decoding.** PGN files are read as `utf-8-sig` (a
+  Windows Notepad BOM no longer surfaces as an unrecognised movetext token)
+  and undecodable bytes (e.g. a Latin-1 corpus) exit cleanly with
+  `Cannot read PGN file` instead of a traceback.
+- **PGN reader edge cases.** ChessBase-style glued move numbers (`1.e4`,
+  `2...Nc6`) are accepted; an all-digit token with a leading zero (a
+  nonstandard `00` castling attempt) fails loud instead of being silently
+  swallowed as a move number and desyncing the replay; a stray trailing
+  result token no longer yields a phantom empty game.
+
+### Added
+
+- A real full-length game mining fixture (`tests/data/opera_game.pgn`, the
+  1858 Morphy Opera game, 33 plies, positions up to 32 men): mining it must
+  finish fast (measured about 0.3 s pure Python; test bound 30 s) and its
+  three mined puzzles — Bxd7+ winning the exchange, the Qb8+ queen-sacrifice
+  mate in two, and Rd8# — are pinned exactly.
+
 ## [2.1.0] - 2026-07-30
 
 PGN corpus mining: derive verified puzzles from real games. Pure standard
