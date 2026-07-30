@@ -81,6 +81,15 @@ def test_generate_puzzle_unknown_goal_raises():
         generate_puzzle(goal="mate_in_9")
 
 
+def test_render_puzzle_labels_mate_in_3():
+    # Regression: mate_in_3 was missing from the goal labels, so the raw string
+    # "mate_in_3" leaked into the rendering instead of "Mate in 3".
+    puzzle = generate_puzzle(goal="mate_in_3", seed=1)
+    shown = render_puzzle(puzzle)
+    assert "Mate in 3" in shown
+    assert "mate_in_3" not in shown
+
+
 def test_render_puzzle_hides_and_reveals_solution():
     puzzle = generate_puzzle(goal="mate_in_1", seed=3)
     hidden = render_puzzle(puzzle, reveal=False)
