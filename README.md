@@ -46,16 +46,21 @@ imports it).
 
 **PGN corpus mining.** `--mine games.pgn` reads a PGN file with a stdlib-only
 mainline reader (headers, comments, NAGs, nested variations skipped, results,
-multiple games; malformed input fails loud naming the game and line), replays
-each game through `parse_san`, and at every position runs cheap prefilters
-before the expensive searches (the mate-in-1 scan, `forced_mate_move` at
-depths 2-3, `find_forks`). Candidates are deduped by position and re-verified
-through `verify_puzzle` before being emitted as deterministic JSON lines.
-Honest limits: only the mainline is replayed, and the prefilters trade recall
-for speed (deep mate searches need a check available, and depth 3 runs only in
-positions of at most 6 men), so some tactics in a game will be missed —
-but nothing is emitted that the engine has not re-proven. The five-game test
-fixture mines 8 exactly-pinned puzzles in about 2 seconds of pure Python.
+multiple games, move numbers spaced `1. e4` or glued `1.e4`; malformed input
+fails loud naming the game and line), replays each game through `parse_san`,
+and at every position runs cheap prefilters before the bounded searches: the
+mate-in-1 scan; full-width `forced_mate_move` at depth 2 in positions of at
+most 8 men, with a checks-only depth-2 scan in larger ones; depth 3 only at
+6 men or fewer; and `find_forks` under a hard node budget. Candidates are
+deduped by position and re-verified through `verify_puzzle` before being
+emitted as deterministic JSON lines. Honest limits: only the mainline is
+replayed, and the prefilters trade recall for speed (above 8 men a mate in 2
+is found only via a checking key move, and a fork is emitted only when the
+recapture model proves the gain), so some tactics in a game will be missed —
+but nothing is emitted that the engine has not re-proven. Measured locally:
+the five-game test fixture (8 exactly-pinned puzzles) and the full 33-ply
+Opera game fixture (3 pinned puzzles, positions up to 32 men) each mine in
+under a second of pure Python.
 
 ## What's new in v2
 
@@ -68,8 +73,9 @@ tool stays offline and zero-dependency:
   renderer and cross-checked with `python-chess`.
 - **Mate in 3** - the exhaustive solver generalises, with a verified mate-in-3 bank puzzle.
 - **Verified tactics** - `find_forks` reports a fork only when an engine capture search
-  PROVES the material win; `find_pins` / `find_skewers` detect line tactics (absolute
-  pins cross-checked with `python-chess`).
+  PROVES the material win (a fail-soft alpha-beta search under a hard node budget:
+  a candidate it cannot prove in budget is simply not reported); `find_pins` /
+  `find_skewers` detect line tactics (absolute pins cross-checked with `python-chess`).
 - **Difficulty** - a deterministic `difficulty(puzzle)` score + band and a
   `--difficulty easy|medium|hard` generation filter.
 - **Solve mode** - `--solve` reads your move (SAN or UCI) and checks it, with a hint.
@@ -143,9 +149,9 @@ python -m pytest -q
 
 Test counts (local, Python 3.13):
 
-- Full suite, `python-chess` installed: **237 passed**.
+- Full suite, `python-chess` installed: **250 passed**.
 - Core only, no third-party libs:
-  `python -m pytest -q --ignore=tests/test_with_chess.py` → **171 passed**.
+  `python -m pytest -q --ignore=tests/test_with_chess.py` → **184 passed**.
 - With `python-chess` absent, `tests/test_with_chess.py` reports **1 skipped**
   rather than failing (it uses `pytest.importorskip("chess")`). The suite is also
   linted with **ruff** and type-checked with **mypy --strict** in CI.
@@ -174,7 +180,8 @@ Palamedes/
 ├── tests/                # engine, bank, verifier, generator, cli, perft, san,
 │   │                     # mate3, tactics, difficulty, export, golden, hostile,
 │   │                     # pgn, miner, cli_mine, perf, version — stdlib only
-│   ├── data/mined_games.pgn  # mining fixture (castling + promotion + tactics)
+│   ├── data/mined_games.pgn  # toy mining fixture (castling + promotion + tactics)
+│   ├── data/opera_game.pgn   # real-game mining fixture (full 32-man positions)
 │   └── test_with_chess.py    # OPTIONAL cross-check vs python-chess (skips if absent)
 ├── pyproject.toml        # ruff + mypy --strict config
 ├── conftest.py           # makes the package importable under bare `pytest`
@@ -190,8 +197,8 @@ Palamedes/
   used for the "mate in N" logic, and `perft` counts nodes for the correctness
   harness. Correctness is pinned by reference perft counts and by the optional
   `python-chess` cross-checks.
-- **`tactics.py`** — `find_forks` (reported only when a capture search proves the
-  material win), `find_pins`, and `find_skewers`.
+- **`tactics.py`** — `find_forks` (reported only when a budget-bounded alpha-beta
+  capture search proves the material win), `find_pins`, and `find_skewers`.
 - **`difficulty.py`** / **`export.py`** — deterministic difficulty scoring and
   JSON / PGN export.
 - **`fen_bank.py`** — 10 curated puzzles (6 mate-in-1, 2 mate-in-2, 1 mate-in-3,
@@ -215,17 +222,23 @@ This is a compact, self-verifying puzzle tool, not a full engine or trainer:
 - The forced-mate search is exhaustive and only intended for shallow depths
   (mate in 1 to 3). It is not a general-strength search.
 - Tactic detection (`find_forks` / `find_pins` / `find_skewers`) uses a shallow
-  material capture search and geometric ray analysis; it finds the common motifs
-  it is designed for, not every tactic in a position.
+  material capture search (alpha-beta, capped by a hard node budget — a fork
+  whose proof does not finish in budget is not reported) and geometric ray
+  analysis; it finds the common motifs it is designed for, not every tactic in
+  a position.
 - The bank is small (a handful of hand-curated positions); beyond it, puzzles
   are derived from a FEN you supply or mined from a PGN you supply.
 - Mining reads mainlines only (variations are skipped) and its prefilters trade
-  recall for speed: deep mate searches run only where a check is available (and,
-  for mate in 3, only in positions of at most 6 men), and a fork is emitted only
-  when the verifier's recapture model proves the gain. Some tactics present in a
-  game will therefore be missed; everything emitted is engine-proven.
-- Mining speed is honest pure-Python speed: the five-game test fixture takes
-  about 2 seconds; a large corpus is not the target use case.
+  recall for speed: deep mate searches run only where a check is available; above
+  8 men the depth-2 search considers only checking key moves that leave at most
+  4 replies (a quiet key move is then missed — this is pinned by a test); depth 3
+  runs only at 6 men or fewer; and a fork is emitted only when the verifier's
+  recapture model proves the gain. Some tactics present in a game will therefore
+  be missed; everything emitted is engine-proven.
+- Mining speed is honest pure-Python speed: the five-game test fixture and the
+  33-ply Opera game fixture each mine in under a second locally, so budget
+  roughly a second per full game; a large corpus is still not the target use
+  case.
 
 ## Safety / privacy
 

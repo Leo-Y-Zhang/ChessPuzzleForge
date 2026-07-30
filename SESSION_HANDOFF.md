@@ -1,5 +1,36 @@
 # Session handoff - Palamedes
 
+## PROJECT STATUS (2026-07-30, later) - v2.1.1 review-fix round COMPLETE, committed locally
+
+Confirmed review finding fixed: the v2.1.0 miner effectively hung on REAL games
+(find_forks ran an unbounded all-captures negamax; one ordinary 32-man opening
+position took 15+ minutes). All local commits on main, NOT pushed:
+
+- `tactics.py`: fork proof is now fail-soft alpha-beta (captures ordered by falling
+  victim value) under a hard node budget (`find_forks(..., max_nodes=20000)`, shared
+  per call). Full-window root values are IDENTICAL to the old negamax (pinned tests
+  unchanged); the 32-man position now takes ~1 ms; budget-exhausted candidates are
+  unproven -> not reported (soundness over recall).
+- `miner.py`: depth-2 mate search above 8 men is a bounded checks-only scan
+  (checking key moves leaving <= 4 replies, each reply confirmed by a mate-in-1
+  scan); full-width forced_mate_move still runs at <= 8 men (quiet keys). The
+  recall trade is pinned by a test (11-men quiet-key m2 is real but not emitted).
+- `verifier.py`: mate-goal failure hint computed lazily (success path never runs the
+  whole-position search); messages unchanged.
+- `cli.py`: --mine reads utf-8-sig, catches UnicodeDecodeError -> clean exit 2.
+- `pgn.py`: glued move numbers (1.e4 / 2...Nc6) accepted; zero-led digit tokens
+  (nonstandard 00 castling) fail loud instead of silently desyncing; stray trailing
+  result no longer yields a phantom empty game.
+- NEW fixture `tests/data/opera_game.pgn` (Morphy 1858, 33 plies, 32-man positions):
+  mines in ~0.3 s, 3 puzzles pinned exactly (Bxd7+ exchange win, Qb8+ mate-in-2
+  queen sac, Rd8#). README/CHANGELOG updated honestly; version 2.1.1 in lockstep.
+- Gates at head: full suite 250 passed, core-only 184 passed, ruff clean,
+  mypy --strict clean.
+
+Exact next step: user review, then push main (PRIVATE repo, GreenPandaTech noreply).
+
+---
+
 ## PROJECT STATUS (2026-07-30) - v2.1.0 PGN mining round COMPLETE, committed locally
 
 v2.0.0 shipped earlier (merged + tagged; the v2 program notes below are HISTORICAL).
