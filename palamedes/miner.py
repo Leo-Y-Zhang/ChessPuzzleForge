@@ -10,10 +10,13 @@ before they are emitted - a mined answer is proven, never assumed.
 Honesty notes:
 
 * **Recall is best-effort by design**; soundness is not. The prefilters trade
-  recall for speed (deep mate searches only run where a check is available -
-  and, for depth 3, only in positions of at most ``_M3_MAX_MEN`` men - so a
-  quiet-first-move mate in a heavy middlegame will be missed), and only the
-  mainline is replayed. Everything that IS emitted has been re-proven.
+  recall for speed: deep mate searches only run where a check is available; the
+  full-width depth-2 search runs only in positions of at most
+  ``_M2_SMALL_POSITION_MEN`` men (larger positions get a bounded checks-only
+  scan, so a quiet-first-move mate in a heavy middlegame is missed); depth 3
+  runs only at ``_M3_MAX_MEN`` men or fewer; fork proofs are capped by
+  ``find_forks``'s node budget; and only the mainline is replayed. Everything
+  that IS emitted has been re-proven.
 * A fork is emitted as a ``win_material`` puzzle only when the verifier's
   strict recapture model can prove the gain (at least
   ``_MIN_FORK_THRESHOLD`` pawns); forks whose payoff needs a follow-up move
@@ -100,19 +103,12 @@ def _mine_mate(board: Board, puzzle_id: str, out: list[Puzzle]) -> bool:
         return False  # the game just ended here (mate/stalemate)
 
     # One push per move; a mate in 1 is a checking move with no replies.
-    checking: list[tuple[Move, Board]] = []
+    checking: list[tuple[Move, Board, list[Move]]] = []
     for move in moves:
         child = board.push(move)
         if child.is_check():
-            checking.append((move, child))
-    mate1: list[Move] = []
-    reply_counts: list[int] = []
-    for move, child in checking:
-        replies = child.legal_moves()
-        if replies:
-            reply_counts.append(len(replies))
-        else:
-            mate1.append(move)
+            checking.append((move, child, child.legal_moves()))
+    mate1 = [move for move, _child, replies in checking if not replies]
 
     if mate1:
         puzzle: Puzzle = {
@@ -130,22 +126,24 @@ def _mine_mate(board: Board, puzzle_id: str, out: list[Puzzle]) -> bool:
         return False
     men = _men_on_board(board)
 
-    forcing = men <= _M2_SMALL_POSITION_MEN or any(
-        n <= _M2_FORCING_REPLY_MAX for n in reply_counts
-    )
-    if forcing:
+    if men <= _M2_SMALL_POSITION_MEN:
+        # Small position: the full-width search is cheap and catches quiet key moves.
         key = forced_mate_move(board, 2)
-        if key is not None:
-            puzzle = {
-                "id": f"{puzzle_id}-m2",
-                "fen": fen,
-                "goal": "mate_in_2",
-                "solution": [key],
-                "san": f"{move_to_san(board, _move_by_uci(moves, key))} (then mate next move)",
-                "theme": "mined mate-in-two",
-            }
-            _emit(puzzle, out)
-            return True
+    else:
+        # Large position: bounded checks-only scan (quiet key moves are missed
+        # here by design - the recall trade that keeps mining real games fast).
+        key = _forcing_mate_in_2(checking)
+    if key is not None:
+        puzzle = {
+            "id": f"{puzzle_id}-m2",
+            "fen": fen,
+            "goal": "mate_in_2",
+            "solution": [key],
+            "san": f"{move_to_san(board, _move_by_uci(moves, key))} (then mate next move)",
+            "theme": "mined mate-in-two",
+        }
+        _emit(puzzle, out)
+        return True
 
     if men <= _M3_MAX_MEN:
         key = forced_mate_move(board, 3)
@@ -168,6 +166,22 @@ def _move_by_uci(moves: Sequence[Move], uci: str) -> Move:
         if move.uci() == uci:
             return move
     raise AssertionError(f"search returned a move not in the legal list: {uci}")
+
+
+def _forcing_mate_in_2(checking: Sequence[tuple[Move, Board, list[Move]]]) -> str | None:
+    """Checks-only mate-in-2 scan: bounded per-position work on large boards.
+
+    A checking move that leaves the defender at most ``_M2_FORCING_REPLY_MAX``
+    replies, every one of which runs into a mate in 1, is a proven mate in 2.
+    Quiet key moves are never considered here; the full-width search that would
+    catch them runs only in positions of at most ``_M2_SMALL_POSITION_MEN`` men.
+    """
+    for move, child, replies in checking:
+        if not replies or len(replies) > _M2_FORCING_REPLY_MAX:
+            continue
+        if all(forced_mate_move(child.push(reply), 1) is not None for reply in replies):
+            return move.uci()
+    return None
 
 
 def _mine_fork(board: Board, puzzle_id: str, out: list[Puzzle]) -> bool:

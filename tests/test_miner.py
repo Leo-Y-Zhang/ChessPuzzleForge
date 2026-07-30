@@ -1,10 +1,13 @@
 """PGN corpus mining: replay games, prefilter, search, verify, emit.
 
-The fixture (tests/data/mined_games.pgn) is five short games with known
+The toy fixture (tests/data/mined_games.pgn) is five short games with known
 findable tactics - its movetext includes a castling move (O-O) and a promotion
 (bxa8=Q#) - and the mined output is pinned EXACTLY: ids, FENs, goals, solutions,
-SAN and themes. Every mined puzzle must also independently re-pass the
-verifier, and malformed input must fail loud.
+SAN and themes. The realistic fixture (tests/data/opera_game.pgn) is a real
+full-length game whose positions reach 32 men: it pins that mining ordinary
+games is fast (the original pipeline stalled for 15+ minutes on one such
+position) and that its mined output is exact. Every mined puzzle must also
+independently re-pass the verifier, and malformed input must fail loud.
 """
 
 from __future__ import annotations
@@ -14,11 +17,13 @@ from pathlib import Path
 
 import pytest
 
+from palamedes.engine import Board, forced_mate_move
 from palamedes.miner import mine_games, mine_pgn
 from palamedes.pgn import PgnError, read_games
 from palamedes.verifier import verify_puzzle
 
 FIXTURE = (Path(__file__).parent / "data" / "mined_games.pgn").read_text(encoding="utf-8")
+OPERA = (Path(__file__).parent / "data" / "opera_game.pgn").read_text(encoding="utf-8")
 
 EXPECTED = [
     {
@@ -166,6 +171,69 @@ def test_mining_a_small_file_completes_in_seconds():
     mine_pgn(FIXTURE)
     elapsed = time.perf_counter() - start
     assert elapsed < 30.0, f"mining the fixture unexpectedly slow: {elapsed:.2f}s"
+
+
+# --------------------------------------------------- a real full-length game
+OPERA_EXPECTED = [
+    {
+        # Before 15. Bxd7+: the bishop grabs the d7 rook; after the forced
+        # recapture White is an exchange up (Morphy's actual move).
+        "id": "mined-g1-p28-fork",
+        "fen": "4kb1r/p2r1ppp/4qn2/1B2p1B1/4P3/1Q6/PPP2PPP/2KR4 w k - 2 15",
+        "goal": "win_material",
+        "solution": ["b5d7"],
+        "san": "Bxd7+",
+        "threshold": 2.0,
+        "theme": "mined bishop fork",
+    },
+    {
+        # Before 16. Qb8+: the queen sacrifice forces 16... Nxb8 17. Rd8#.
+        # Found by the large-board checks-only scan (21 men on the board).
+        "id": "mined-g1-p30-m2",
+        "fen": "4kb1r/p2n1ppp/4q3/4p1B1/4P3/1Q6/PPP2PPP/2KR4 w k - 0 16",
+        "goal": "mate_in_2",
+        "solution": ["b3b8"],
+        "san": "Qb8+ (then mate next move)",
+        "theme": "mined mate-in-two",
+    },
+    {
+        # Before 17. Rd8#: the famous final mate.
+        "id": "mined-g1-p32-m1",
+        "fen": "1n2kb1r/p4ppp/4q3/4p1B1/4P3/8/PPP2PPP/2KR4 w k - 0 17",
+        "goal": "mate_in_1",
+        "solution": ["d1d8"],
+        "san": "Rd8#",
+        "theme": "mined mate-in-one",
+    },
+]
+
+
+def test_mining_a_real_full_length_game_is_fast_and_exactly_pinned():
+    # The Opera game replays through 32-man opening positions - exactly the
+    # inputs --mine advertises. The unprefiltered pipeline used to stall for
+    # 15+ minutes on a single such position; the bound here is generous.
+    start = time.perf_counter()
+    mined = mine_pgn(OPERA)
+    elapsed = time.perf_counter() - start
+    assert mined == OPERA_EXPECTED
+    assert elapsed < 30.0, f"mining a real game unexpectedly slow: {elapsed:.2f}s"
+
+
+def test_every_opera_puzzle_independently_re_passes_the_verifier():
+    for puzzle in mine_pgn(OPERA):
+        ok, message = verify_puzzle(puzzle)
+        assert ok, f"{puzzle['id']}: {message}"
+
+
+def test_quiet_key_mate_in_2_on_a_large_board_is_missed_by_design():
+    # Game E's quiet-king-move mate in 2, padded with pawns to 11 men: the mate
+    # is real (the full-width search proves it) but above the small-position
+    # cutoff the miner scans checking key moves only, so nothing is emitted.
+    # This pins the documented recall trade that keeps real-game mining fast.
+    fen = "8/4pppp/8/8/8/3Q4/k3PPPP/2K5 w - - 0 1"
+    assert forced_mate_move(Board.from_fen(fen), 2) == "c1c2"  # the mate exists
+    text = f'[SetUp "1"]\n[FEN "{fen}"]\n[Result "*"]\n\n*\n'
+    assert mine_pgn(text) == []
 
 
 # ------------------------------------------------------------ loud failures
