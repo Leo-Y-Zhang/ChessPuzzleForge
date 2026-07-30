@@ -59,6 +59,30 @@ def test_cli_mine_malformed_pgn_is_a_clean_error(tmp_path, capsys):
     assert captured.out == ""
 
 
+def test_cli_mine_non_utf8_file_is_a_clean_error_not_a_traceback(tmp_path, capsys):
+    # Latin-1 PGN files (accented player names) are common in real corpora:
+    # undecodable bytes must take the clean exit-2 path, never a traceback.
+    latin1 = tmp_path / "latin1.pgn"
+    latin1.write_bytes('[White "S\xe9bastien"]\n[Result "*"]\n\n1. e4 *\n'.encode("latin-1"))
+    rc = main(["--mine", str(latin1)])
+    captured = capsys.readouterr()
+    assert rc == 2
+    assert "Cannot read PGN file" in captured.err
+    assert captured.out == ""
+
+
+def test_cli_mine_accepts_a_utf8_bom_file(tmp_path, capsys):
+    # Windows Notepad writes UTF-8 with a BOM by default; the BOM must not
+    # surface as an unrecognised movetext token.
+    bom = tmp_path / "bom.pgn"
+    bom.write_bytes(b"\xef\xbb\xbf" + b'[Result "0-1"]\n\n1. f3 e5 2. g4 Qh4# 0-1\n')
+    rc = main(["--mine", str(bom)])
+    captured = capsys.readouterr()
+    assert rc == 0
+    ids = [json.loads(line)["id"] for line in captured.out.strip().splitlines()]
+    assert ids == ["mined-g1-p3-m1"]
+
+
 def test_cli_bounds_require_mine():
     with pytest.raises(SystemExit) as excinfo:
         main(["--max-games", "3"])
