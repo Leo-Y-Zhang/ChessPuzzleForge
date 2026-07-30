@@ -93,6 +93,7 @@ def render_puzzle(puzzle: Puzzle, reveal: bool = False) -> str:
     goal_labels = {
         "mate_in_1": "Mate in 1",
         "mate_in_2": "Mate in 2",
+        "mate_in_3": "Mate in 3",
         "win_material": "Win material",
     }
     goal = goal_labels.get(puzzle["goal"], puzzle["goal"])
