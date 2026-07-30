@@ -19,6 +19,8 @@ Puzzle types:
 - **Win material** — a "grab the hanging piece" tactic checked 2 ply deep,
   accounting for the opponent's best recapture
 - **Tactics** — forks (engine-proven), pins, and skewers, exposed via the API
+- **Mined from your games** — `--mine games.pgn` replays a PGN file and emits
+  the verified mates and forks it finds along the mainlines (new in v2.1)
 
 Each puzzle carries a position (FEN), the side to move, the solution move(s) in
 UCI notation, a human-readable SAN, and an ASCII board rendering.
@@ -39,6 +41,21 @@ mate solutions against a mature implementation. That referee is the only
 third-party code anywhere near the project, it is dev/test-only, and if it is
 not installed the test file skips itself cleanly (nothing in the shipped tool
 imports it).
+
+## What's new in v2.1
+
+**PGN corpus mining.** `--mine games.pgn` reads a PGN file with a stdlib-only
+mainline reader (headers, comments, NAGs, nested variations skipped, results,
+multiple games; malformed input fails loud naming the game and line), replays
+each game through `parse_san`, and at every position runs cheap prefilters
+before the expensive searches (the mate-in-1 scan, `forced_mate_move` at
+depths 2-3, `find_forks`). Candidates are deduped by position and re-verified
+through `verify_puzzle` before being emitted as deterministic JSON lines.
+Honest limits: only the mainline is replayed, and the prefilters trade recall
+for speed (deep mate searches need a check available, and depth 3 runs only in
+positions of at most 6 men), so some tactics in a game will be missed —
+but nothing is emitted that the engine has not re-proven. The five-game test
+fixture mines 8 exactly-pinned puzzles in about 2 seconds of pure Python.
 
 ## What's new in v2
 
@@ -87,6 +104,10 @@ python -m palamedes --verify-all
 # Filter by difficulty band, or solve interactively:
 python -m palamedes --goal mate_in_2 --difficulty hard --reveal
 python -m palamedes --seed 5 --solve      # type your move as SAN (Qd8#) or UCI (d1d8)
+
+# Mine verified puzzles from the games in a PGN file (JSON lines on stdout,
+# progress on stderr); bound the work with --max-games / --max-plies:
+python -m palamedes --mine games.pgn --max-games 100 > mined.jsonl
 ```
 
 Example output:
@@ -122,14 +143,15 @@ python -m pytest -q
 
 Test counts (local, Python 3.13):
 
-- Full suite, `python-chess` installed: **203 passed**.
+- Full suite, `python-chess` installed: **237 passed**.
 - Core only, no third-party libs:
-  `python -m pytest -q --ignore=tests/test_with_chess.py` → **137 passed**.
+  `python -m pytest -q --ignore=tests/test_with_chess.py` → **171 passed**.
 - With `python-chess` absent, `tests/test_with_chess.py` reports **1 skipped**
   rather than failing (it uses `pytest.importorskip("chess")`). The suite is also
   linted with **ruff** and type-checked with **mypy --strict** in CI.
 
-CI runs the full suite on Python 3.11, 3.12, and 3.13 (see
+CI runs the full suite, ruff, and mypy on a single validated Python version
+(3.13) to stay within free-tier minutes; `requires-python` is `>=3.11` (see
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
 
 ## Project layout
@@ -145,11 +167,14 @@ Palamedes/
 │   ├── tactics.py        # engine-verified forks + geometric pins / skewers
 │   ├── difficulty.py     # deterministic difficulty score + band
 │   ├── export.py         # deterministic JSON / PGN export
-│   ├── cli.py            # argparse command-line interface (+ --difficulty, --solve)
+│   ├── pgn.py            # fail-loud mainline PGN reader (stdlib only)
+│   ├── miner.py          # prefiltered, verified puzzle mining over PGN games
+│   ├── cli.py            # argparse command-line interface (+ --solve, --mine)
 │   └── __main__.py       # enables `python -m palamedes`
 ├── tests/                # engine, bank, verifier, generator, cli, perft, san,
 │   │                     # mate3, tactics, difficulty, export, golden, hostile,
-│   │                     # perf, version — stdlib only
+│   │                     # pgn, miner, cli_mine, perf, version — stdlib only
+│   ├── data/mined_games.pgn  # mining fixture (castling + promotion + tactics)
 │   └── test_with_chess.py    # OPTIONAL cross-check vs python-chess (skips if absent)
 ├── pyproject.toml        # ruff + mypy --strict config
 ├── conftest.py           # makes the package importable under bare `pytest`
@@ -178,6 +203,9 @@ Palamedes/
 - **`generator.py`** — derives a mate-in-1 from a raw position
   (`derive_mate_in_1`), draws a validated one from the bank (`generate_puzzle`),
   and renders puzzles for the CLI.
+- **`pgn.py`** / **`miner.py`** — a fail-loud mainline PGN reader
+  (`read_games`) and the mining pipeline (`mine_pgn`): replay, prefilter,
+  search, dedupe by position, re-verify through `verify_puzzle`, emit.
 - **`cli.py`** — a thin argparse front end.
 
 ## Scope and limitations
@@ -189,9 +217,15 @@ This is a compact, self-verifying puzzle tool, not a full engine or trainer:
 - Tactic detection (`find_forks` / `find_pins` / `find_skewers`) uses a shallow
   material capture search and geometric ray analysis; it finds the common motifs
   it is designed for, not every tactic in a position.
-- The bank is small (a handful of hand-curated positions). New puzzles either
-  come from the bank or are derived mate-in-1s from a FEN you supply; there is no
-  mining from a game corpus yet.
+- The bank is small (a handful of hand-curated positions); beyond it, puzzles
+  are derived from a FEN you supply or mined from a PGN you supply.
+- Mining reads mainlines only (variations are skipped) and its prefilters trade
+  recall for speed: deep mate searches run only where a check is available (and,
+  for mate in 3, only in positions of at most 6 men), and a fork is emitted only
+  when the verifier's recapture model proves the gain. Some tactics present in a
+  game will therefore be missed; everything emitted is engine-proven.
+- Mining speed is honest pure-Python speed: the five-game test fixture takes
+  about 2 seconds; a large corpus is not the target use case.
 
 ## Safety / privacy
 
@@ -205,13 +239,16 @@ This is a compact, self-verifying puzzle tool, not a full engine or trainer:
 correctness harness; SAN input; deterministic difficulty scoring + `--difficulty`;
 an interactive `--solve` mode; and deterministic PGN/JSON export.
 
+**Delivered in v2.1**: PGN corpus mining (`--mine`) - mainline replay, prefiltered
+mate/fork searches, dedupe, and re-verification of every emitted puzzle.
+
 **Next**
-- More motifs (discovered attacks, back-rank shots, deeper mates) and a larger,
-  mined puzzle set with auto-tagged themes.
+- More motifs (discovered attacks, back-rank shots, deeper mates) and richer
+  auto-tagged themes for mined puzzles.
 - A SQLite puzzle store and richer difficulty calibration.
 
 **V3**
-- Mine mates/tactics from a large game/position corpus and auto-tag themes.
+- Scale mining to large corpora (better prefilters or an optional fast backend).
 - Optional Stockfish/UCI backend for deeper verification (kept offline, opt-in).
 - A minimal local web UI (isolated so the tested core stays dependency-free).
 - Spaced-repetition training keyed to the motifs a user struggles with.

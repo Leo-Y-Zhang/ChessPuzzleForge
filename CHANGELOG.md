@@ -7,6 +7,42 @@ from a static answer key.
 The format follows [Keep a Changelog](https://keepachangelog.com/); this project
 uses [Semantic Versioning](https://semver.org/).
 
+## [2.1.0] - 2026-07-30
+
+PGN corpus mining: derive verified puzzles from real games. Pure standard
+library, deterministic, and fail-loud throughout; zero runtime dependencies
+preserved.
+
+### Added
+
+- **Mainline PGN reader** (`read_games`): tag-pair headers, movetext with move
+  numbers, brace and semicolon comments, `$n` annotation glyphs, `!`/`?` move
+  suffixes, results, and multiple games per file. Parenthesised variations
+  (including nested ones) are skipped - mainline only, by design. Malformed
+  input raises `PgnError` naming the game and line; the reader never silently
+  misparses.
+- **Mining pipeline** (`mine_pgn` / `mine_games`, CLI `--mine games.pgn`):
+  replays each game through `parse_san`, and at every position runs cheap
+  prefilters (checks available, mating material, men on board, forcing-check
+  reply counts) before the expensive searches - the mate-in-1 scan,
+  `forced_mate_move` at depths 2-3, and `find_forks`. Every candidate is
+  deduped by position and re-verified through `verify_puzzle` before it is
+  emitted; a fork is emitted only when the verifier's recapture model proves
+  the gain. Output is deterministic (discovery order, `puzzle_to_json` lines);
+  `--max-games` / `--max-plies` bound the work and progress goes to stderr.
+  Recall is best-effort by design (prefilters trade recall for speed; a
+  quiet-first-move mate in a heavy middlegame is missed) - soundness is not:
+  the five-game test fixture mines 8 puzzles, each pinned exactly, in about
+  2 seconds of pure Python.
+
+### Fixed
+
+- `render_puzzle` now labels `mate_in_3` puzzles as "Mate in 3" instead of
+  leaking the raw goal string.
+- README no longer claims a 3.11/3.12/3.13 CI matrix; CI runs a single
+  validated version (3.13) to stay within free-tier minutes, as `ci.yml`
+  always did.
+
 ## [2.0.0] - 2026-07-12
 
 A large, fully additive expansion of the verified core. The v1 API and CLI are
