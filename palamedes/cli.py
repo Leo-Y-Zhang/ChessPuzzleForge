@@ -21,6 +21,10 @@ Derive the mate-in-1 for an arbitrary position of your own::
 List every puzzle in the bank::
 
     python -m palamedes --list
+
+Mine verified puzzles from the games in a PGN file (JSON lines on stdout)::
+
+    python -m palamedes --mine games.pgn --max-games 100 > mined.jsonl
 """
 
 from __future__ import annotations
@@ -28,10 +32,13 @@ from __future__ import annotations
 import argparse
 import sys
 from collections.abc import Callable
+from pathlib import Path
 
 from .engine import Board, Move, move_from_uci, parse_san, parse_square, square_name
+from .export import puzzle_to_json
 from .fen_bank import Puzzle, all_puzzles
 from .generator import generate_puzzle, make_puzzle_from_position, render_puzzle
+from .miner import mine_pgn
 from .verifier import verify_puzzle, verify_solution
 
 GOALS = ("mate_in_1", "mate_in_2", "mate_in_3", "win_material")
@@ -82,6 +89,24 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="verify every bank puzzle with the engine and exit.",
     )
+    parser.add_argument(
+        "--mine",
+        metavar="PGN",
+        help="mine engine-verified puzzles from the games in this PGN file "
+        "(one JSON puzzle per stdout line; progress on stderr).",
+    )
+    parser.add_argument(
+        "--max-games",
+        type=int,
+        default=None,
+        help="with --mine: mine at most this many games from the file.",
+    )
+    parser.add_argument(
+        "--max-plies",
+        type=int,
+        default=None,
+        help="with --mine: replay at most this many plies of each game.",
+    )
     return parser
 
 
@@ -101,6 +126,28 @@ def _cmd_verify_all() -> int:
         print(f"{status}  {p['id']:24s} {message}")
     print("\nAll puzzles verified." if all_ok else "\nSome puzzles FAILED verification.")
     return 0 if all_ok else 1
+
+
+def _cmd_mine(path: str, max_games: int | None, max_plies: int | None) -> int:
+    try:
+        text = Path(path).read_text(encoding="utf-8")
+    except OSError as exc:
+        print(f"Cannot read PGN file: {exc}", file=sys.stderr)
+        return 2
+    try:
+        puzzles = mine_pgn(
+            text,
+            max_games=max_games,
+            max_plies=max_plies,
+            progress=lambda line: print(line, file=sys.stderr),
+        )
+    except ValueError as exc:  # PgnError is a ValueError: malformed or illegal PGN
+        print(f"Mining failed: {exc}", file=sys.stderr)
+        return 2
+    for puzzle in puzzles:
+        print(puzzle_to_json(puzzle))
+    print(f"Mined {len(puzzles)} verified puzzles.", file=sys.stderr)
+    return 0
 
 
 def _read_move(board: Board, raw: str) -> Move | None:
@@ -150,10 +197,15 @@ def main(argv: list[str] | None = None, reader: Callable[[str], str] = input) ->
     parser = build_parser()
     args = parser.parse_args(argv)
 
+    if (args.max_games is not None or args.max_plies is not None) and not args.mine:
+        parser.error("--max-games and --max-plies require --mine")
+
     if args.list:
         return _cmd_list()
     if args.verify_all:
         return _cmd_verify_all()
+    if args.mine:
+        return _cmd_mine(args.mine, args.max_games, args.max_plies)
 
     if args.fen:
         try:
