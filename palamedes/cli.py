@@ -130,8 +130,11 @@ def _cmd_verify_all() -> int:
 
 def _cmd_mine(path: str, max_games: int | None, max_plies: int | None) -> int:
     try:
-        text = Path(path).read_text(encoding="utf-8")
-    except OSError as exc:
+        # utf-8-sig strips the BOM that Windows editors prepend to UTF-8 files
+        # (and reads plain UTF-8 unchanged). Undecodable bytes (e.g. a Latin-1
+        # corpus) are a clean read error, never a traceback.
+        text = Path(path).read_text(encoding="utf-8-sig")
+    except (OSError, UnicodeDecodeError) as exc:
         print(f"Cannot read PGN file: {exc}", file=sys.stderr)
         return 2
     try:
