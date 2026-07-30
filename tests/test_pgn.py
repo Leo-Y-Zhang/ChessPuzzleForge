@@ -82,6 +82,25 @@ def test_movetext_without_tag_section_is_accepted():
     assert game.tags == {}
 
 
+def test_glued_move_numbers_without_a_space_are_accepted():
+    # ChessBase-style exports glue the move number to the SAN ('1.e4').
+    text = '[Result "1-0"]\n\n1.e4 e5 2.Nf3 Nc6 3.Bb5!? a6 1-0\n'
+    (game,) = read_games(text)
+    assert game.moves == ("e4", "e5", "Nf3", "Nc6", "Bb5", "a6")
+
+
+def test_glued_black_continuation_numbers_are_accepted():
+    (game,) = read_games("1. e4 e5 2. Nf3 2...Nc6 *\n")
+    assert game.moves == ("e4", "e5", "Nf3", "Nc6")
+
+
+def test_result_only_game_with_tags_is_still_accepted():
+    # A forfeit record: tags plus a bare result and no moves is legal PGN.
+    (game,) = read_games('[Result "1-0"]\n\n1-0\n')
+    assert game.moves == ()
+    assert game.result == "1-0"
+
+
 def test_empty_or_blank_input_yields_no_games():
     assert read_games("") == []
     assert read_games("\n  \n") == []
@@ -127,3 +146,18 @@ def test_error_in_second_game_names_game_2():
 def test_bare_nag_without_digits_fails_loud():
     with pytest.raises(PgnError, match=r"game 1"):
         read_games('[Result "*"]\n\n1. e4 $ e5 *\n')
+
+
+def test_zero_led_digit_token_fails_loud_instead_of_desyncing():
+    # A nonstandard '00' castling token must not be silently swallowed as a
+    # move number (that would desync the replay); real move numbers never
+    # start with 0, so it fails loud instead.
+    with pytest.raises(PgnError, match=r"game 1.*'00'"):
+        read_games('[Result "*"]\n\n1. e4 e5 2. Ke2 Ke7 3. 00 *\n')
+
+
+def test_stray_trailing_result_is_not_a_phantom_game():
+    # '1. e4 * 1-0' used to parse as TWO games, the second an empty phantom
+    # carrying the stray result. A game with no tags and no moves is malformed.
+    with pytest.raises(PgnError, match=r"game 2"):
+        read_games("1. e4 e5 * 1-0\n")
