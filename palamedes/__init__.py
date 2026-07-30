@@ -58,4 +58,4 @@ __all__ = [
     "verify_solution",
 ]
 
-__version__ = "2.0.0"  # kept in lockstep with pyproject [project] version
+__version__ = "2.1.0"  # kept in lockstep with pyproject [project] version

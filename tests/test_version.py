@@ -1,4 +1,4 @@
-"""The package __version__ and pyproject version stay in lockstep at the v2 release."""
+"""The package __version__ and pyproject version stay in lockstep at the current release."""
 
 import re
 from pathlib import Path
@@ -8,8 +8,8 @@ import palamedes
 PYPROJECT = Path(__file__).resolve().parents[1] / "pyproject.toml"
 
 
-def test_version_is_the_v2_release():
-    assert palamedes.__version__ == "2.0.0"
+def test_version_is_the_current_release():
+    assert palamedes.__version__ == "2.1.0"
 
 
 def test_pyproject_version_matches_package():

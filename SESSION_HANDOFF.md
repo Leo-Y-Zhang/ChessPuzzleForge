@@ -1,26 +1,29 @@
-# Session handoff - Palamedes "to the max" (targeting v2.0.0)
+# Session handoff - Palamedes
 
-> AUTONOMOUS OVERNIGHT MODE (set 2026-07-12): user is away until ~12pm next day.
-> Work the program autonomously and SELF-RESUME across usage/5h-window + context
-> resets. Every wake: re-anchor from THIS file + the project_repo_max_upgrades
-> memory + MEMORY.md, one line project/last-done/next, then execute. Commit+push each
-> GREEN increment (GreenPandaTech noreply, PRIVATE repo), keep the "Exact next step"
-> current, verify (bare `.venv/Scripts/python -m pytest -q` + ruff + mypy --strict once
-> configured) before claiming done, run the adversarial verify before any merge.
-> Standing gates: never push secrets, never flip repo visibility public, nothing
-> outward/irreversible beyond merge+tag to the PRIVATE repo, proprietary licence kept.
-> Reschedule the overnight wakeup each turn. Repo #15 of the program; after Palamedes:
-> Mentor, NeuralBox. Prior repos shipped: Kineo v2.0.0 (#13), Lynceus v2.0.0 (#14).
+## PROJECT STATUS (2026-07-30) - v2.1.0 PGN mining round COMPLETE, committed locally
 
-Program: repo max-upgrades #15 (after Lynceus #14 shipped v2.0.0). Palamedes is ALREADY
-v1.0.0 (tagged) -> to-the-max targets **v2.0.0**. Spec:
-`docs/superpowers/specs/to-the-max.md`. Branch `feature/to-the-max` (cut from the
-proprietary-licence commit b54846c on main). Baseline = **62 core tests** (bare pytest,
-no chess) / **109 full** (with the dev-only `python-chess` referee). venv at `.venv`
-(Windows: `.venv/Scripts/python -m pytest -q`; pip installed pytest + chess + ruff +
-mypy). ZERO runtime deps; pure-Python. The moat = an ENGINE-VERIFIED chess puzzle
-generator (ships its own engine, PROVES every answer; perft-pinned move gen). CI = bare
-`pytest` (root conftest makes `import palamedes` resolve; matrix 3.11/3.12/3.13).
+v2.0.0 shipped earlier (merged + tagged; the v2 program notes below are HISTORICAL).
+This round added **v2.1.0 - PGN corpus mining** on main, in local commits that are
+**NOT yet pushed** (the round's instructions were commit-only):
+
+- `palamedes/pgn.py` - stdlib mainline PGN reader, fail-loud (PgnError names game+line).
+- `palamedes/miner.py` - mine_pgn/mine_games: replay via parse_san, cheap prefilters
+  (checks available / mating material / men on board / forcing-reply counts) before the
+  expensive searches (mate-in-1 scan, forced_mate_move depths 2-3, find_forks), dedupe
+  by position, EVERY candidate re-verified through verify_puzzle before emission.
+- CLI `--mine games.pgn` + `--max-games` / `--max-plies`; JSON lines out, progress to
+  stderr. Fixture `tests/data/mined_games.pgn` (castling + promotion in movetext) mines
+  8 exactly-pinned puzzles in ~2s.
+- Small fixes: render_puzzle mate_in_3 label; README CI-matrix claim corrected to the
+  single-3.13 truth. CHANGELOG 2.1.0; versions in lockstep.
+- Gates at head: full suite 237 passed (`.venv/Scripts/python.exe -m pytest -q`),
+  core-only 171 passed, ruff clean, mypy --strict clean.
+
+Exact next step: user review, then push main (PRIVATE repo, GreenPandaTech noreply).
+
+---
+
+HISTORICAL (v2.0.0 "to the max" program notes, kept for context; counts are stale):
 
 ## THE HARD GATE (correctness + honesty) - the review lens
 Engine-verified correctness FOREVER (never an illegal move / unverified puzzle / a
