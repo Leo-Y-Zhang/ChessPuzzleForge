@@ -228,12 +228,17 @@ def main(argv: list[str] | None = None, reader: Callable[[str], str] = input) ->
     parser = build_parser()
     args = parser.parse_args(argv)
 
-    if (args.max_games is not None or args.max_plies is not None) and not args.mine:
+    # An explicitly given empty string ("--synth \"\"") must fail loud like any
+    # other bad value, never truthiness-skip its branch and fall through to the
+    # bank generator - hence "is not None" rather than bare truth tests below.
+    if (args.max_games is not None or args.max_plies is not None) and args.mine is None:
         parser.error("--max-games and --max-plies require --mine")
-    if (args.count is not None or args.tries is not None) and not args.synth:
+    if (args.count is not None or args.tries is not None) and args.synth is None:
         parser.error("--count and --tries require --synth")
-    if args.synth:
-        if args.mine or args.fen:
+    if args.count is not None and (args.solve or args.reveal):
+        parser.error("--count emits JSON lines; it cannot be combined with --solve or --reveal")
+    if args.synth is not None:
+        if args.mine is not None or args.fen is not None:
             parser.error("--synth cannot be combined with --mine or --fen")
         if args.difficulty:
             parser.error("--difficulty filters the bank; it does not apply to --synth")
@@ -244,10 +249,10 @@ def main(argv: list[str] | None = None, reader: Callable[[str], str] = input) ->
         return _cmd_list()
     if args.verify_all:
         return _cmd_verify_all()
-    if args.mine:
+    if args.mine is not None:
         return _cmd_mine(args.mine, args.max_games, args.max_plies)
 
-    if args.synth:
+    if args.synth is not None:
         # Default to mate in 2: deep enough to be a real puzzle, cheap to find.
         mate_in = _SYNTH_DEPTHS[args.goal or "mate_in_2"]
         try:
@@ -267,7 +272,7 @@ def main(argv: list[str] | None = None, reader: Callable[[str], str] = input) ->
             print(f"Synthesized {len(puzzles)} verified puzzles.", file=sys.stderr)
             return 0
         puzzle = puzzles[0]
-    elif args.fen:
+    elif args.fen is not None:
         try:
             derived = make_puzzle_from_position(args.fen)
         except ValueError as exc:

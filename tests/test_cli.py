@@ -53,6 +53,16 @@ def test_cli_fen_invalid_returns_friendly_error(capsys):
     assert "Invalid FEN" in err
 
 
+def test_cli_fen_empty_string_fails_loud_not_bank_fallthrough(capsys):
+    # An explicitly empty FEN is invalid input: it must never truthiness-skip
+    # the --fen branch and print a bank puzzle with exit 0.
+    rc = main(["--fen", ""])
+    captured = capsys.readouterr()
+    assert rc == 2
+    assert "Invalid FEN" in captured.err
+    assert captured.out == ""
+
+
 def test_cli_fen_no_mate_returns_error(capsys):
     rc = main(["--fen", "8/8/8/8/8/8/8/k6K w - - 0 1"])
     err = capsys.readouterr().err

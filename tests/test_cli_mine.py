@@ -49,6 +49,16 @@ def test_cli_mine_missing_file_is_a_clean_error(capsys):
     assert captured.out == ""
 
 
+def test_cli_mine_empty_path_fails_loud_not_bank_fallthrough(capsys):
+    # An explicitly empty path is a bad file like any other: it must never
+    # truthiness-skip the mining branch and print a bank puzzle with exit 0.
+    rc = main(["--mine", ""])
+    captured = capsys.readouterr()
+    assert rc == 2
+    assert "Cannot read PGN file" in captured.err
+    assert captured.out == ""
+
+
 def test_cli_mine_malformed_pgn_is_a_clean_error(tmp_path, capsys):
     bad = tmp_path / "bad.pgn"
     bad.write_text("1. e4 {never closed\n", encoding="utf-8")
