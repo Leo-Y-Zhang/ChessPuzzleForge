@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "palamedes"
-version = "2.1.1"
+version = "2.2.0"
 description = "Engine-verified offline chess puzzle generator (mate-in-N, tactics). Pure Python, zero runtime dependencies; every answer is proven by a bundled from-scratch chess engine."
 readme = "README.md"
 requires-python = ">=3.11"

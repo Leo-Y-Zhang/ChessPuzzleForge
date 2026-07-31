@@ -7,6 +7,54 @@ from a static answer key.
 The format follows [Keep a Changelog](https://keepachangelog.com/); this project
 uses [Semantic Versioning](https://semver.org/).
 
+## [2.2.0] - 2026-07-31
+
+Seeded endgame synthesis: generate fresh, engine-proven mate-in-N puzzles from
+nothing but a piece set. Pure standard library, deterministic, fail-loud
+throughout; zero runtime dependencies preserved.
+
+### Added
+
+- **Endgame synthesizer** (`synthesize_puzzle` / `synthesize_puzzles`, module
+  `palamedes/synth.py`): samples positions uniformly from a bounded piece set
+  (the white king, one to three white pieces from Q/R/B/N, and the bare black
+  king, White to move) with `random.Random(seed)`, rejects illegal placements
+  (adjacent kings, defender already in check), and keeps only positions where
+  the existing `forced_mate_move` prover finds mate in EXACTLY the requested
+  number of moves — present at depth N and absent at every shallower depth, so
+  a "mate in 2" is never a disguised mate in 1. Every accepted candidate is
+  then re-proven through `verify_puzzle` before it is emitted (the same accept
+  gate the miner uses); a verifier disagreement raises instead of emitting.
+  Output mirrors the miner: mate-in-1 lists every mating move, deeper goals
+  carry the SAN continuation suffixes. `parse_piece_set`, `synthesize_puzzle`
+  and `synthesize_puzzles` are re-exported in the public API.
+- **CLI synthesis mode**: `--synth KQK` composes with
+  `--goal mate_in_1|mate_in_2|mate_in_3` (default `mate_in_2`), `--seed`,
+  `--reveal` and `--solve`; `--count N` emits JSON lines like `--mine`
+  (summary on stderr); `--tries` bounds the sampling budget (default 2000).
+  Exhaustion, invalid piece sets (pawns are excluded by design), bad depths
+  and bad budgets all fail loud with exit 2 and a clear message — never a
+  silently downgraded goal. Measured locally (Python 3.13, end to end
+  including interpreter startup): `--synth KRK --seed 7 --reveal` about 1.5 s,
+  `--synth KQK --seed 9 --count 2` about 0.4 s, and
+  `--synth KRRK --goal mate_in_3 --seed 0` about 0.6 s; deeper goals cost more
+  per sample (disproving the shallower mate is the expensive direction) and
+  the cost varies with the seed, so the budget, not the clock, bounds the
+  work.
+- 39 new tests (exactness, piece census, byte-identical determinism, batch
+  dedupe by position, fail-loud specs, the never-emit-on-failed-verification
+  gate, and every CLI mode): full suite 250 -> 289, core-only 184 -> 223.
+
+### Fixed
+
+- **Empty-string CLI values no longer fall through to the bank.** `--synth ""`,
+  `--mine ""` and `--fen ""` used to truthiness-skip their branch and print a
+  bank puzzle with exit 0; each now takes its own error path (invalid piece
+  set / unreadable file / invalid FEN) and exits 2.
+- **`--count` now conflicts loudly with `--solve` / `--reveal`.** The JSON
+  batch mode used to silently drop the interactive flags; combining them is
+  now a parser error, matching the CLI's fail-loud posture.
+
 ## [2.1.1] - 2026-07-30
 
 Mining now handles real games at real speed. The 2.1.0 pipeline was measured

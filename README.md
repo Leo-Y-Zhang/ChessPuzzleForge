@@ -22,6 +22,9 @@ Puzzle types:
 - **Mined from your games** — `--mine games.pgn` replays a PGN file and emits
   the verified mates and forks it finds along the mainlines (new in v2.1; see
   [Mining a real game](#mining-a-real-game) for a live session)
+- **Synthesized endgames** — `--synth KQK` samples a bounded piece set until
+  the engine proves an exact mate-in-N, no input file needed (new in v2.2; see
+  [Synthesizing fresh endgames](#synthesizing-fresh-endgames))
 
 Each puzzle carries a position (FEN), the side to move, the solution move(s) in
 UCI notation, a human-readable SAN, and an ASCII board rendering.
@@ -42,6 +45,20 @@ mate solutions against a mature implementation. That referee is the only
 third-party code anywhere near the project, it is dev/test-only, and if it is
 not installed the test file skips itself cleanly (nothing in the shipped tool
 imports it).
+
+## What's new in v2.2
+
+**Seeded endgame synthesis.** `--synth KQK` generates a fresh puzzle instead of
+drawing one from the bank or a PGN: positions are sampled uniformly from a
+bounded piece set (the white king, one to three white pieces from Q/R/B/N, and
+the bare black king), and a sample is kept only when the engine proves a forced
+mate in EXACTLY the requested number of moves — present at depth N, absent at
+N-1, so a "mate in 2" is never a disguised mate in 1. Every accepted position
+is then re-proven through `verify_puzzle` before it is printed, the same accept
+gate the miner uses. Deterministic given `--seed`, budget-bounded via `--tries`
+(running out fails loud rather than looping forever), and `--count N` emits
+JSON lines exactly like `--mine`. See
+[Synthesizing fresh endgames](#synthesizing-fresh-endgames) for a live session.
 
 ## What's new in v2.1
 
@@ -115,6 +132,11 @@ python -m palamedes --seed 5 --solve      # type your move as SAN (Qd8#) or UCI 
 # Mine verified puzzles from the games in a PGN file (JSON lines on stdout,
 # progress on stderr); bound the work with --max-games / --max-plies:
 python -m palamedes --mine games.pgn --max-games 100 > mined.jsonl
+
+# Synthesize a fresh, engine-proven endgame from a piece set (mate in 2 by
+# default; deterministic with --seed; --count emits JSON lines like --mine):
+python -m palamedes --synth KRK --seed 7 --reveal
+python -m palamedes --synth KQK --seed 9 --count 2 > synthesized.jsonl
 ```
 
 Example output:
@@ -181,6 +203,62 @@ output trustworthy:
   2
   ```
 
+## Synthesizing fresh endgames
+
+`--synth` needs no input file at all: give it a piece set and it samples
+positions until the engine proves one is mate in exactly the requested number
+of moves, then re-proves it through `verify_puzzle` before printing anything:
+
+```bash
+python -m palamedes --synth KRK --seed 7 --reveal
+```
+
+```
+Puzzle: synth-krk-m2-s7-p1
+Theme:  synthesized KRK mate-in-two
+Goal:   Mate in 2  (White to move)
+
+  +------------------------+
+8 | . . K . . . . R |
+7 | k . . . . . . . |
+...
+  +------------------------+
+    a b c d e f g h
+
+FEN: 2K4R/k7/8/8/8/8/8/8 w - - 0 1
+
+Solution: Rh6 (then mate next move)  (UCI: h8h6)
+```
+
+Batch mode emits JSON lines exactly like the miner (the summary goes to
+stderr, never into the JSON stream), and the same seed always reproduces the
+same puzzles:
+
+```json
+{"fen": "8/k7/2K5/8/8/8/8/5Q2 w - - 0 1", "goal": "mate_in_2", "id": "synth-kqk-m2-s9-p1", "san": "Qb5 (then mate next move)", "solution": ["f1b5"], "theme": "synthesized KQK mate-in-two"}
+{"fen": "8/8/2Q5/8/1K6/8/8/1k6 w - - 0 1", "goal": "mate_in_2", "id": "synth-kqk-m2-s9-p2", "san": "Kb3 (then mate next move)", "solution": ["b4b3"], "theme": "synthesized KQK mate-in-two"}
+```
+
+Both commands above run in about half a second to a second and a half
+measured locally on Python 3.13, interpreter startup included. Two design
+rules keep the output trustworthy:
+
+- **Exactness by laddered absence.** A candidate is accepted for mate-in-N
+  only after the prover finds *no* mate at every depth below N — the expensive
+  direction, but the honest one. Deeper goals therefore cost more per sample
+  and the cost varies with the seed; `--tries` bounds the total work.
+- **Fail loud.** Pawns are excluded from piece sets by design (they would
+  need placement and promotion rules for no mate coverage gain at these
+  depths), and a set that cannot mate exhausts its budget and exits nonzero
+  rather than looping or downgrading the goal:
+
+  ```
+  $ python -m palamedes --synth KPK
+  Synthesis failed: invalid piece set 'KPK': unsupported piece(s) P; use Q, R, B or N (pawns and extra kings are not supported)
+  $ echo $?
+  2
+  ```
+
 ## Tests
 
 The optional test extras (`pytest`, and the `python-chess` referee) install
@@ -195,9 +273,9 @@ python -m pytest -q
 
 Test counts (local, Python 3.13):
 
-- Full suite, `python-chess` installed: **250 passed**.
+- Full suite, `python-chess` installed: **289 passed**.
 - Core only, no third-party libs:
-  `python -m pytest -q --ignore=tests/test_with_chess.py` → **184 passed**.
+  `python -m pytest -q --ignore=tests/test_with_chess.py` → **223 passed**.
 - With `python-chess` absent, `tests/test_with_chess.py` reports **1 skipped**
   rather than failing (it uses `pytest.importorskip("chess")`). The suite is also
   linted with **ruff** and type-checked with **mypy --strict** in CI.
@@ -221,11 +299,13 @@ Palamedes/
 │   ├── export.py         # deterministic JSON / PGN export
 │   ├── pgn.py            # fail-loud mainline PGN reader (stdlib only)
 │   ├── miner.py          # prefiltered, verified puzzle mining over PGN games
-│   ├── cli.py            # argparse command-line interface (+ --solve, --mine)
+│   ├── synth.py          # seeded, verified endgame synthesis from piece sets
+│   ├── cli.py            # argparse CLI (+ --solve, --mine, --synth)
 │   └── __main__.py       # enables `python -m palamedes`
 ├── tests/                # engine, bank, verifier, generator, cli, perft, san,
 │   │                     # mate3, tactics, difficulty, export, golden, hostile,
-│   │                     # pgn, miner, cli_mine, perf, version — stdlib only
+│   │                     # pgn, miner, cli_mine, synth, cli_synth, perf,
+│   │                     # version — stdlib only
 │   ├── data/mined_games.pgn  # toy mining fixture (castling + promotion + tactics)
 │   ├── data/opera_game.pgn   # real-game mining fixture (full 32-man positions)
 │   └── test_with_chess.py    # OPTIONAL cross-check vs python-chess (skips if absent)
@@ -259,6 +339,9 @@ Palamedes/
 - **`pgn.py`** / **`miner.py`** — a fail-loud mainline PGN reader
   (`read_games`) and the mining pipeline (`mine_pgn`): replay, prefilter,
   search, dedupe by position, re-verify through `verify_puzzle`, emit.
+- **`synth.py`** — seeded endgame synthesis (`synthesize_puzzles`): sample a
+  bounded piece set uniformly, prove an exact mate-in-N with the engine,
+  re-verify through `verify_puzzle`, emit.
 - **`cli.py`** — a thin argparse front end.
 
 ## Scope and limitations
@@ -285,6 +368,12 @@ This is a compact, self-verifying puzzle tool, not a full engine or trainer:
   33-ply Opera game fixture each mine in under a second locally, so budget
   roughly a second per full game; a large corpus is still not the target use
   case.
+- Synthesis samples bounded piece sets only (the white king plus one to three
+  of Q/R/B/N versus the bare black king; no pawns — they would need placement
+  and promotion rules for no mate coverage gain at these depths). A set that
+  cannot force the requested mate (e.g. `KNK`) exhausts its `--tries` budget
+  and exits nonzero rather than looping, and deeper goals cost more per sample
+  because disproving the shallower mate is the expensive direction.
 
 ## Safety / privacy
 
@@ -300,6 +389,10 @@ an interactive `--solve` mode; and deterministic PGN/JSON export.
 
 **Delivered in v2.1**: PGN corpus mining (`--mine`) - mainline replay, prefiltered
 mate/fork searches, dedupe, and re-verification of every emitted puzzle.
+
+**Delivered in v2.2**: seeded endgame synthesis (`--synth`) - uniform sampling
+from bounded piece sets, exact mate-in-N proof by laddered absence, the
+verifier accept gate on every emission, and deterministic JSON batch output.
 
 **Next**
 - More motifs (discovered attacks, back-rank shots, deeper mates) and richer

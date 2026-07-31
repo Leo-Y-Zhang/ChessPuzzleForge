@@ -1,5 +1,44 @@
 # Session handoff - Palamedes
 
+## PROJECT STATUS (2026-07-31) - v2.2.0 endgame synthesis round COMPLETE, committed locally
+
+Feature round (workflow: implement -> adversarial review -> finalize). All commits
+local on main, NOT pushed - the orchestrator pushes after its verification sweep.
+
+- NEW `palamedes/synth.py`: seeded endgame synthesis. Uniform sampling from a
+  bounded piece set (white K + 1-3 of Q/R/B/N + bare black king, White to move)
+  via random.Random(seed); illegal placements rejected (adjacent kings, defender
+  in check); a sample is kept only when forced_mate_move proves mate in EXACTLY
+  the requested N (present at N, absent at every shallower depth); every accepted
+  candidate re-proven through verify_puzzle before emission (verifier disagreement
+  raises, never emits). Output mirrors the miner (m1 lists every mating move).
+- CLI: `--synth PIECES` composes with --goal mate_in_1|2|3 (default 2), --seed,
+  --reveal, --solve; --count N emits JSON lines like --mine; --tries bounds the
+  budget (default 2000). parse_piece_set/synthesize_puzzle/synthesize_puzzles
+  re-exported.
+- Adversarial review: no blockers/majors; 3 minors -> 2 fixed, 1 rejected:
+  (1) FIXED empty-string fall-through: --synth "" / --mine "" / --fen "" used to
+  truthiness-skip their branch and print a bank puzzle exit 0; all three now take
+  their own error path, exit 2 (regression tests added in test_cli_synth/
+  test_cli_mine/test_cli).
+  (2) FIXED --count silently dropping --solve/--reveal: now a parser error.
+  (3) REJECTED docs-only finding: the "p well above 1%" phrasing lived only in the
+  implementer report, not in any committed file (repo comment says
+  "astronomically unlikely", which holds: reviewer measured p ~ 1.03%, flake
+  probability ~ e^-206).
+- Docs: CHANGELOG 2.2.0 (all numbers run-verified this session), README v2.2
+  section + "Synthesizing fresh endgames" live transcript + counts/layout/scope
+  updated. Version 2.2.0 in lockstep (pyproject + __init__ + test_version).
+- Gates at head (run this session): full suite 289 passed, core-only
+  (--ignore=tests/test_with_chess.py) 223 passed, ruff clean, mypy --strict clean
+  (13 files). Timings measured: --synth KRK --seed 7 ~1.5s end-to-end; KQK
+  --count 2 --seed 9 ~0.4s; KRRK m3 --seed 0 ~0.6s.
+
+Exact next step: orchestrator verification sweep, then push main (PRIVATE repo,
+GreenPandaTech noreply identity).
+
+---
+
 ## PROJECT STATUS (2026-07-30, later) - v2.1.1 review-fix round COMPLETE, committed locally
 
 Confirmed review finding fixed: the v2.1.0 miner effectively hung on REAL games
