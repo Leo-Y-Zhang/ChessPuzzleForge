@@ -62,6 +62,28 @@ def test_cli_synth_invalid_piece_set_is_a_clean_error(capsys):
     assert captured.out == ""
 
 
+def test_cli_synth_empty_spec_fails_loud_not_bank_fallthrough(capsys):
+    # An explicitly empty spec is a bad piece set like any other: it must
+    # never truthiness-skip the synth branch and print a bank puzzle.
+    rc = main(["--synth", ""])
+    captured = capsys.readouterr()
+    assert rc == 2
+    assert "Synthesis failed" in captured.err
+    assert "piece set" in captured.err
+    assert captured.out == ""
+
+
+def test_cli_count_conflicts_with_solve_and_reveal():
+    # --count emits JSON lines; silently dropping the interactive flags would
+    # be quiet misuse, so both combinations are parser errors.
+    with pytest.raises(SystemExit) as excinfo:
+        main(["--synth", "KQK", "--count", "1", "--solve"])
+    assert excinfo.value.code == 2
+    with pytest.raises(SystemExit) as excinfo:
+        main(["--synth", "KQK", "--count", "1", "--reveal"])
+    assert excinfo.value.code == 2
+
+
 def test_cli_synth_rejects_win_material():
     with pytest.raises(SystemExit):
         main(["--synth", "KQK", "--goal", "win_material"])
