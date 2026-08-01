@@ -26,7 +26,15 @@ jobs:
       - name: Install
         run: |
           python -m pip install --upgrade pip
-          pip install pytest ruff mypy
+          # ruff and mypy are pinned because their verdict IS the gate: a new
+          # release can fail a commit that nobody touched. That is not a theory
+          # here -- GraphRecords, which had the same unpinned install, went from
+          # green to 55 lint errors purely because ruff 0.16.1 shipped. Both
+          # versions below were verified against this exact tree (v2.2.0): ruff
+          # clean, mypy strict clean over 13 source files, 289 tests passing.
+          # pytest is deliberately left unpinned -- a runner upgrade does not
+          # change whether the code is correct, it just runs the same assertions.
+          pip install pytest ruff==0.16.1 mypy==2.3.0
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
       - name: Lint (ruff)
         run: ruff check .
