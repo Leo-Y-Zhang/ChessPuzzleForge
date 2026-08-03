@@ -1,17 +1,26 @@
 # Design Brief — terminal output
 
-**Date:** 2026-08-03 · **PRD:** [PRD.md](PRD.md) · **App Flow:** [APP_FLOW.md](APP_FLOW.md)
+The only rendered surface in this project is text on a terminal: `Board.ascii()`
+for the diagram and `generator.render_puzzle()` for the block around it, plus two
+machine formats, `puzzle_to_json` and `puzzle_to_pgn`. A small surface, so a
+short brief. Every measurement below was taken from the actual output.
 
-> The only rendered surface in this project is text on a terminal:
-> `Board.ascii()` (the diagram) and `generator.render_puzzle()` (the block
-> around it), plus two machine formats, `puzzle_to_json` and `puzzle_to_pgn`.
-> That is a small surface, so this is a short brief. Every measurement below was
-> taken from the actual output.
+[PRD.md](PRD.md) · [APP_FLOW.md](APP_FLOW.md)
 
-## Intent
+## Design for the person who will pipe this
 
-It should read like **a diagram in a chess book**: static, plain, and finished
-the moment it is printed. The tool's whole claim is that its answers are
+Every reader of this output is either scanning it in two seconds or feeding it to
+another program.
+
+Someone at a terminal, mid-session, who has just typed a command and wants the
+position **now** — usually with the terminal one of several windows, often at a
+small size. Frequently the same person five minutes later, reading
+`mined.jsonl` through `jq` rather than looking at boards at all. Occasionally CI,
+which reads the same bytes and must get identical ones.
+
+## A diagram in a chess book
+
+Static, plain, and finished the moment it is printed. The tool's whole claim is that its answers are
 proven, so the presentation should get out of the way and let the position
 speak — no ornament that implies effort or cleverness the program has not done.
 
@@ -20,35 +29,24 @@ redrawn lines, no colour-coded severity, nothing that suggests a long-running
 service. A run is a single short computation that prints a result and exits,
 and the output should look exactly like that.
 
-## Who is looking at it
+## Borrowed from
 
-Someone at a terminal, mid-session, who has just typed a command and wants the
-position **now** — usually with the terminal only one of several windows and
-often at a small size. Frequently the same person five minutes later, reading
-`mined.jsonl` through `jq` rather than looking at boards at all. Occasionally
-CI, which reads the same bytes and must get identical ones.
+`git status` and `git diff` stream discipline, where human commentary and
+machine-consumable content are never mixed in one stream. This project takes the
+same rule literally: puzzle data to stdout, progress and errors to stderr, so
+`--mine games.pgn > mined.jsonl` gives a clean file while the human still sees
+`game 1/1: replayed 33 plies, 3 new puzzles`.
 
-Design for the person who will pipe this. Every reader of this output is
-either scanning it in two seconds or feeding it to another program.
+A printed chess diagram: fixed grid, rank digits down the left, file letters
+along the bottom, one glyph per square, orientation from the side to move.
+`render_puzzle` passes `perspective=board.turn`, so a black-to-move puzzle is
+shown from Black's side and the reader never has to mentally rotate.
 
-## Precedents
+FEN itself. The most useful thing on screen is the line that lets you leave:
+every rendered puzzle prints its FEN, so the position can be pasted into any
+other tool. Designed-in humility, and it stays.
 
-- **`git status` / `git diff` stream discipline.** Human commentary and
-  machine-consumable content are never mixed in one stream. This project takes
-  the same rule literally: puzzle data to stdout, progress and errors to
-  stderr, so `--mine games.pgn > mined.jsonl` gives a clean file while the
-  human still sees `game 1/1: replayed 33 plies, 3 new puzzles`.
-- **A printed chess diagram.** Fixed grid, rank digits down the left, file
-  letters along the bottom, one glyph per square, orientation from the side to
-  move. `render_puzzle` passes `perspective=board.turn`, so a black-to-move
-  puzzle is shown from Black's side — the reader never has to mentally rotate.
-- **FEN itself.** The most useful thing on screen is the line that lets you
-  leave: every rendered puzzle prints its FEN, so the position can be pasted
-  into any other tool. That is designed-in humility, and it stays.
-
-## Anti-patterns for this project
-
-Specific enough to enforce in review:
+## Refusals, specific enough to enforce in review
 
 - **Unicode chess pieces (`♞`).** Ambiguous-width in many terminals, so the
   grid shifts; unavailable in several code pages; announced inconsistently by
@@ -65,7 +63,7 @@ Specific enough to enforce in review:
 - **Emoji or decorative rules.** They read as AI-generated polish and add
   nothing a chess player wants.
 
-## The grid
+## The grid, and a defect in it
 
 Monospace is assumed — it is a terminal. The board is a fixed 8×8 of
 single-character cells separated by one space, `.` for empty, uppercase White,
@@ -77,9 +75,7 @@ files.
 Nothing wraps: the widest line in a rendered puzzle is the FEN, comfortably
 under 80 columns for any legal position.
 
-### Defect: the frame is 7 columns too wide
-
-Measured, not inferred:
+The frame is seven columns too wide. Measured, not inferred:
 
 ```
 28  '  +------------------------+'
@@ -98,7 +94,7 @@ quietly omitted it would be worth nothing. **Not fixed here** — the change tha
 prompted this document was documentation and naming only, and a rendering
 change belongs in its own commit with a golden-output test.
 
-## Signal vocabulary
+## Meaning is carried by words, position and stream
 
 There is no colour, so meaning is carried entirely by words, position and
 stream. The full vocabulary:
@@ -138,9 +134,7 @@ terminal wraps; that is the terminal's decision, not the program's.
 
 ## Accessibility floor — non-negotiable
 
-The web floor in the template (contrast ratios, touch targets, 200% zoom) does
-not apply to a program that emits plain text. The terminal equivalents do, and
-they are met:
+The terminal equivalents of the usual floor, all met:
 
 - ASCII only — legible under any code page, correct through a screen reader.
 - Colour is never a signal, because there is no colour.

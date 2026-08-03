@@ -1,16 +1,14 @@
 # App Flow — ChessPuzzleForge CLI
 
-**Date:** 2026-08-03 · **PRD:** [PRD.md](PRD.md) · **TDD:** [TDD.md](TDD.md)
+There is no GUI. The interactive surface is `chesspuzzleforge/cli.py` — an
+argparse front end plus one genuinely interactive mode, `--solve`, which reads a
+move from stdin and judges it. "Screen" below means a terminal state, and every
+transcript and exit code here was produced by running the command rather than
+read off the source.
 
-> There is no GUI. The interactive surface is `chesspuzzleforge/cli.py` — an
-> argparse front end plus one genuinely interactive mode (`--solve`, which
-> reads a move from stdin and judges it). "Screen" below means a terminal
-> state; every transcript and exit code here was produced by running the
-> command, not read off the source.
+[PRD.md](PRD.md) · [TDD.md](TDD.md)
 
-## Entry points
-
-There is exactly one: a shell.
+## One entry point: a shell
 
 ```
 python -m chesspuzzleforge [flags]     # the documented form; no install needed
@@ -21,7 +19,7 @@ Nothing links here, nothing redirects here, there is no session and no state
 carried between runs. Two invocations with the same argv produce the same
 output — and with `--seed`, byte-identically.
 
-## Mode dispatch (and its precedence)
+## Mode dispatch, and why the order is silent
 
 `main()` validates flag combinations first, then picks **exactly one** mode, in
 this fixed order. The order matters because it is silent: the first match wins
@@ -40,7 +38,7 @@ and later flags are simply not consulted.
 Modes 4–6 all end at a *puzzle*, which is then either rendered or handed to
 `--solve`.
 
-## The happy path
+## What a default run does
 
 The default run — no flags, no file, no network:
 
@@ -86,9 +84,8 @@ then `move_from_uci`, and both check legality in the actual position.
 
 ## Every state of every mode
 
-The template's six web states map onto a CLI as: normal output · nothing to
-show · bad input · interrupted · slow · and the machine-readable variant. All
-six are real here.
+Six states, all of them real here: normal output, nothing to show, bad input,
+interrupted, slow, and the machine-readable variant.
 
 | Mode | Normal | Nothing to show | Bad input | Interrupted | Slow |
 |---|---|---|---|---|---|
@@ -148,16 +145,13 @@ stateDiagram-v2
 Every path in that diagram terminates in an exit code. There is no loop, no
 retry and no state to be stuck in.
 
-## Permissions
+## Permissions, and dead ends
 
-None. No accounts, no roles, no sessions, no revocation — the process runs as
-whoever invoked it and can read exactly the files that user can read. The
-template's "access revoked while the user is on the screen" question has no
-analogue and is not answered here rather than answered vacuously.
+There are no permissions: no accounts, no roles, no sessions, nothing to revoke.
+The process runs as whoever invoked it and can read exactly the files that user
+can read.
 
-## Dead ends
-
-None found. Every terminal state prints a message that names the next action:
+Nor are there dead ends. Every terminal state prints a message that names the next action:
 a bad piece set lists the accepted letters, an exhausted budget names three
 different remedies, an illegal move restates both accepted notations, an
 unfiltered empty pool names the goal *and* the difficulty that produced it, and
@@ -165,7 +159,7 @@ a withheld solution names the flag that reveals it. Nothing says "something
 went wrong", and nothing suggests retrying an operation that cannot succeed on
 a retry.
 
-## Known rough edges
+## Two rough edges
 
 Recorded here rather than quietly fixed, because this document is
 retrospective and the rename that prompted it was documentation-only.
@@ -184,9 +178,7 @@ retrospective and the rename that prompted it was documentation-only.
    first wrong guess therefore prints the full solution in UCI, which defeats
    the mode's purpose.
 
-## Accessibility
-
-The relevant floor for a terminal program, and it is met:
+## The terminal floor, and it is met
 
 - **ASCII only.** No Unicode chess glyphs, no box-drawing characters, no
   emoji. Output is legible under any code page and speaks correctly through a
