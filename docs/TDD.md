@@ -3,7 +3,7 @@
 Derived by reading the code at v2.2.0, not the README. The module contracts
 below are what the functions actually do. Requirements: [PRD.md](PRD.md).
 
-## One primitive, four producers, one gate
+## Nothing is printed that has not just been re-proven
 
 Everything is built on a pure-Python chess engine — `engine.py`, about 750 lines,
 standard library only — that parses FEN, generates *fully legal* moves, and
