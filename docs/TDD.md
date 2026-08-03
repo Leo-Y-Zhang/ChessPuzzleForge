@@ -122,8 +122,9 @@ mate-in-3, one win-material — as module-level data. `all_puzzles()`,
 caller cannot mutate the bank, and `get_puzzle` raises `KeyError` on a miss.
 
 **`generator.py`** provides `derive_mate_in_1(fen)`,
-`make_puzzle_from_position(fen)`, `generate_puzzle(...)` and
-`render_puzzle(puzzle, reveal=False)`. `generate_puzzle` re-verifies before
+`make_puzzle_from_position(fen)`,
+`generate_puzzle(goal=None, seed=None, validate=True, difficulty=None) -> Puzzle`
+and `render_puzzle(puzzle, reveal=False)`. `generate_puzzle` re-verifies before
 returning and raises `AssertionError` if a *bank* puzzle fails — that is a "the
 data shipped broken" condition rather than user error, so it is loud and fatal.
 
