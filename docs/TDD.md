@@ -190,7 +190,7 @@ repository is `tests/test_perft.py`, using published reference node counts, and
 `tests/test_with_chess.py`, using `python-chess` as referee. Removing either
 would leave the project's central claim resting on self-agreement.
 
-## Failure modes
+## What goes wrong, and what the user sees
 
 | What breaks | Who notices | How we detect it | How we undo it |
 |---|---|---|---|
@@ -218,7 +218,7 @@ No compatibility shim — a `palamedes/__init__.py` re-exporting the new package
 was added. The repository is private, unpublished and has no external importers,
 so a shim would be dead code preserving a name we are trying to retire.
 
-## Rollback
+## Undoing a release, and why there is nothing else to undo
 
 The process writes **nothing**: no files, no config, no cache, no network calls.
 There is no runtime state to roll back, so stopping the tool is the rollback and
@@ -230,7 +230,7 @@ For code, every change is a `git revert` away, because there is no schema and no
 deployed instance. The rename above is the only change not internal to a single
 file, and it is a single commit.
 
-## Test plan
+## The suite
 
 289 tests with the referee installed, 223 without it. The ones carrying the
 argument:
@@ -263,7 +263,7 @@ placeholder `White`/`Black`, and nothing asserts the key set of a mined puzzle. 
 careless change could leak identity without turning the suite red, and that
 should be pinned before the property is claimed anywhere user-facing.
 
-## Build order
+## How it arrived, release by release
 
 **v1.0.0** — engine (FEN, legal moves, check/mate/stalemate,
 `forced_mate_move`), bank, verifier, generator, CLI.

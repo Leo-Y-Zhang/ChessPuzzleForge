@@ -86,14 +86,6 @@ Each of these is a command rather than an opinion.
 - Deterministic JSON and PGN export, so output composes with other tools.
 - A difficulty score that is at least *reproducible*, even if uncalibrated.
 
-**Won't, this time**
-
-- Playing strength or a general search. The forced-mate solver is exhaustive and
-  only sane to depth 3.
-- Tablebases, an opening book, or an evaluation function beyond material.
-- A GUI, a web UI, or any persistent store.
-- Publication to PyPI.
-
 ## Soundness is the promise; recall is not
 
 **Not a strong engine.** `forced_mate_move` is a small exhaustive minimax,
@@ -106,11 +98,23 @@ checks-only scan above that, depth 3 only at six men or fewer, and forks only
 when a node-budgeted capture search *proves* the gain. Tactics present in a game
 will be missed. Soundness is the promise; recall is not, and is not measured.
 
+That trade was made on evidence rather than taste. Full-width mate search
+everywhere in the miner was measured stalling **15+ minutes** on a single
+ordinary 32-man opening position in v2.1.0, and v2.1.1 replaced it with the
+prefilters plus a hard node budget, with the recall loss written down and
+pinned by a test. Bounded and honest beat complete and hung.
+
 **Not non-mainline PGN.** Parenthesised variations are skipped and never
 validated, so every mined puzzle comes from a position that actually occurred.
 
 **Not pawns in synthesis.** They would need placement and promotion rules for no
 mate coverage gain at depths 1–3.
+
+**Not a book, a tablebase or an evaluation.** No opening book, no tablebases,
+and no evaluation function beyond material.
+
+**Not a UI, and not a package.** There is no GUI and no web UI, and nothing is
+published to PyPI.
 
 **Not storage.** The tool writes no files. Output goes to stdout, and if the user
 redirects it, that is their shell's business.
@@ -154,7 +158,7 @@ There is no server, no account and no upload, so access revocation does not appl
 user's PGN, and the answer is that it is read once, never written, never copied,
 never retained.
 
-## Rejected
+## What it does not depend on, and what it will not become
 
 **Use `python-chess` for move generation.** It would have removed the entire
 point — a from-scratch engine — *and* destroyed the independence of the referee,
@@ -173,16 +177,10 @@ it ever happens.
 **A SQLite puzzle store.** JSON lines on stdout compose with `jq`, `sort` and `>`
 for free and keep the dependency count at zero. On the roadmap, not built.
 
-**Full-width mate search everywhere in the miner.** Rejected on evidence rather
-than taste: v2.1.0 was measured stalling **15+ minutes** on a single ordinary
-32-man opening position. Replaced in v2.1.1 by prefilters plus a hard node
-budget, with the recall loss written down and pinned by a test. Bounded and
-honest beat complete and hung.
-
 **A colour or curses interface.** See the [Design Brief](DESIGN_BRIEF.md). Plain
 ASCII on stdout stays pipeable, screen-reader-friendly and diffable in CI.
 
-## Two unanswered questions
+## What has not been measured
 
 Neither blocks anything; both are real.
 
