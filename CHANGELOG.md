@@ -1,11 +1,29 @@
 # Changelog
 
-All notable changes to Palamedes are documented here. The project's promise is
-that every answer is **proven** by its own bundled chess engine, never trusted
-from a static answer key.
+All notable changes to ChessPuzzleForge are documented here. The project's
+promise is that every answer is **proven** by its own bundled chess engine,
+never trusted from a static answer key.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/); this project
 uses [Semantic Versioning](https://semver.org/).
+
+## [Unreleased]
+
+### Changed
+
+- **Renamed: `Palamedes` -> `ChessPuzzleForge`.** The repository, the import
+  package (`import palamedes` -> `import chesspuzzleforge`), the console script
+  and the module entry point (`python -m chesspuzzleforge`) all move together.
+  No behaviour changed: the same 289 tests pass, ruff and `mypy --strict` stay
+  clean. The only output difference is the PGN `Event` tag, which now reads
+  `ChessPuzzleForge puzzle`. Release entries below predate the rename and name
+  the old package path (e.g. `palamedes/synth.py`); those files are now under
+  `chesspuzzleforge/`.
+
+### Added
+
+- Design documents written retrospectively from the code: `docs/PRD.md`,
+  `docs/TDD.md`, `docs/APP_FLOW.md`, `docs/DESIGN_BRIEF.md`.
 
 ## [2.2.0] - 2026-07-31
 

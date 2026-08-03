@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import pytest
 
-from palamedes.engine import Board, move_to_san, parse_san
-from palamedes.fen_bank import PUZZLES
-from palamedes.tactics import find_forks, find_pins
+from chesspuzzleforge.engine import Board, move_to_san, parse_san
+from chesspuzzleforge.fen_bank import PUZZLES
+from chesspuzzleforge.tactics import find_forks, find_pins
 
 # Pass ``exc_type=ImportError`` so pytest skips cleanly when the optional
 # ``python-chess`` package is simply absent, without the default (soon-to-be

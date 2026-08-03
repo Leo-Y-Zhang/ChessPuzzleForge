@@ -17,11 +17,11 @@ from __future__ import annotations
 
 import pytest
 
-from palamedes.difficulty import difficulty
-from palamedes.engine import Board, forced_mate_move
-from palamedes.generator import derive_mate_in_1
-from palamedes.synth import parse_piece_set, synthesize_puzzle, synthesize_puzzles
-from palamedes.verifier import verify_puzzle
+from chesspuzzleforge.difficulty import difficulty
+from chesspuzzleforge.engine import Board, forced_mate_move
+from chesspuzzleforge.generator import derive_mate_in_1
+from chesspuzzleforge.synth import parse_piece_set, synthesize_puzzle, synthesize_puzzles
+from chesspuzzleforge.verifier import verify_puzzle
 
 # Seeds chosen empirically (deterministic thereafter): each finds its puzzle
 # within a small number of samples so the default suite stays fast.
@@ -171,7 +171,7 @@ def test_a_candidate_that_fails_verification_is_never_emitted(monkeypatch):
         calls.append(puzzle["id"])
         return False, "forced failure for the accept-gate test"
 
-    monkeypatch.setattr("palamedes.synth.verify_puzzle", rejecting_verify)
+    monkeypatch.setattr("chesspuzzleforge.synth.verify_puzzle", rejecting_verify)
     with pytest.raises(AssertionError, match="failed verification"):
         synthesize_puzzle("KQK", mate_in=1, seed=KQK_M1_SEED)
     assert calls  # the gate really ran (and rejected) the candidate

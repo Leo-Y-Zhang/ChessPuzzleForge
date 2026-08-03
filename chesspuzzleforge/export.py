@@ -43,7 +43,7 @@ def puzzle_to_pgn(puzzle: Mapping[str, object]) -> str:
     move_text = f"{board.fullmove}. {san}" if board.turn == "w" else f"{board.fullmove}... {san}"
 
     tags = [
-        '[Event "Palamedes puzzle"]',
+        '[Event "ChessPuzzleForge puzzle"]',
         '[Site "?"]',
         '[Date "????.??.??"]',
         '[Round "?"]',

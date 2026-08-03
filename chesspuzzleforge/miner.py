@@ -4,7 +4,7 @@ Pipeline: each game is replayed through ``parse_san`` (an illegal game score
 fails loud); at every position along the mainline, cheap prefilters decide
 which of the expensive searches are worth running (the mate-in-1 scan,
 ``forced_mate_move`` at depths 2-3, ``find_forks``). Candidates are deduped by
-position and re-verified through :func:`palamedes.verifier.verify_puzzle`
+position and re-verified through :func:`chesspuzzleforge.verifier.verify_puzzle`
 before they are emitted - a mined answer is proven, never assumed.
 
 Honesty notes:

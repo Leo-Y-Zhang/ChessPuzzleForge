@@ -6,8 +6,8 @@ GOLDEN_DIGEST only on an intentional change, and say why in the commit message.
 
 import hashlib
 
-from palamedes.export import puzzle_to_json
-from palamedes.fen_bank import all_puzzles
+from chesspuzzleforge.export import puzzle_to_json
+from chesspuzzleforge.fen_bank import all_puzzles
 
 GOLDEN_DIGEST = "0a4ca774cc89612915ea19ec41a2eeb2804777dbdb15b844b3987eaa21e5e6cf"
 

@@ -4,12 +4,12 @@ The synthesizer samples positions uniformly from a bounded piece set - the
 white king, one to three white pieces drawn from Q/R/B/N, and the bare black
 king, White to move - using ``random.Random(seed)``, so the same seed and
 parameters always yield the same puzzles. A sampled position is kept only
-when the project's existing prover (:func:`palamedes.engine.forced_mate_move`,
+when the project's existing prover (:func:`chesspuzzleforge.engine.forced_mate_move`,
 the same exhaustive search the verifier and the PGN miner trust) finds a
 forced mate in EXACTLY the requested number of moves: present at depth N and
 absent at depth N-1, so a "mate in 2" is never a disguised mate in 1. Every
 accepted candidate is then re-proven through
-:func:`palamedes.verifier.verify_puzzle` before it is returned - the same
+:func:`chesspuzzleforge.verifier.verify_puzzle` before it is returned - the same
 accept gate the miner uses; a candidate that fails verification is never
 emitted (it raises instead, because discovery and proof share the same engine
 and may only disagree on a bug).

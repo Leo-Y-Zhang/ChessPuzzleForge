@@ -5,9 +5,9 @@ FORCED mate in three (every defence loses in <= 3) and that the new bank puzzle
 and the verifier's mate_in_3 branch agree.
 """
 
-from palamedes.engine import Board, forced_mate_move, move_from_uci
-from palamedes.fen_bank import get_puzzle
-from palamedes.verifier import _move_forces_mate, verify_puzzle, verify_solution
+from chesspuzzleforge.engine import Board, forced_mate_move, move_from_uci
+from chesspuzzleforge.fen_bank import get_puzzle
+from chesspuzzleforge.verifier import _move_forces_mate, verify_puzzle, verify_solution
 
 MATE3_FEN = "8/8/8/8/8/6k1/1R6/R5K1 w - - 0 1"
 MATE1_FEN = "6k1/5ppp/8/8/8/8/8/R6K w - - 0 1"  # Ra8#

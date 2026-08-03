@@ -4,8 +4,8 @@ import json
 
 import pytest
 
-from palamedes.export import puzzle_to_json, puzzle_to_pgn
-from palamedes.fen_bank import get_puzzle
+from chesspuzzleforge.export import puzzle_to_json, puzzle_to_pgn
+from chesspuzzleforge.fen_bank import get_puzzle
 
 BACKRANK = get_puzzle("m1-backrank-rook")
 

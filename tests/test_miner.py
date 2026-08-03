@@ -17,10 +17,10 @@ from pathlib import Path
 
 import pytest
 
-from palamedes.engine import Board, forced_mate_move
-from palamedes.miner import mine_games, mine_pgn
-from palamedes.pgn import PgnError, read_games
-from palamedes.verifier import verify_puzzle
+from chesspuzzleforge.engine import Board, forced_mate_move
+from chesspuzzleforge.miner import mine_games, mine_pgn
+from chesspuzzleforge.pgn import PgnError, read_games
+from chesspuzzleforge.verifier import verify_puzzle
 
 FIXTURE = (Path(__file__).parent / "data" / "mined_games.pgn").read_text(encoding="utf-8")
 OPERA = (Path(__file__).parent / "data" / "opera_game.pgn").read_text(encoding="utf-8")

@@ -6,7 +6,7 @@ engine and reports stay deterministic).
 
 import time
 
-from palamedes.engine import Board, perft
+from chesspuzzleforge.engine import Board, perft
 
 START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 

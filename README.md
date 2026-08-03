@@ -1,16 +1,16 @@
-# Palamedes - engine-verified chess puzzle generator (pure Python, zero deps)
+# ChessPuzzleForge - engine-verified chess puzzle generator (pure Python, zero deps)
 
-[![CI](https://github.com/GreenPandaTech/Palamedes/actions/workflows/ci.yml/badge.svg)](https://github.com/GreenPandaTech/Palamedes/actions/workflows/ci.yml)
+[![CI](https://github.com/GreenPandaTech/ChessPuzzleForge/actions/workflows/ci.yml/badge.svg)](https://github.com/GreenPandaTech/ChessPuzzleForge/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![Dependencies](https://img.shields.io/badge/runtime%20deps-none-brightgreen)
 
-Palamedes (the mythical Greek inventor of board games) is an offline chess
-puzzle generator that ships with its own chess engine and **proves** every
-answer it gives you. It does not store a pre-baked answer key and hope it is
-right: each puzzle's solution is re-derived and re-checked by a bundled
-forced-mate search, so the tool cannot serve a "mate in 1" that is not actually
-mate. The whole thing — engine, verifier, generator, CLI, and their tests —
-runs on the Python standard library with **no runtime dependencies**.
+ChessPuzzleForge is an offline chess puzzle generator that ships with its own
+chess engine and **proves** every answer it gives you. It does not store a
+pre-baked answer key and hope it is right: each puzzle's solution is re-derived
+and re-checked by a bundled forced-mate search, so the tool cannot serve a
+"mate in 1" that is not actually mate. The whole thing — engine, verifier,
+generator, CLI, and their tests — runs on the Python standard library with
+**no runtime dependencies**.
 
 Puzzle types:
 
@@ -103,40 +103,40 @@ tool stays offline and zero-dependency:
 
 Requires **Python 3.11+**. There is nothing to install to run the tool — it is
 not published to PyPI and imports only the standard library, so you run it in
-place with `python -m palamedes`.
+place with `python -m chesspuzzleforge`.
 
 ```bash
-git clone https://github.com/GreenPandaTech/Palamedes.git
-cd Palamedes
+git clone https://github.com/GreenPandaTech/ChessPuzzleForge.git
+cd ChessPuzzleForge
 
 # A random puzzle, solution hidden:
-python -m palamedes
+python -m chesspuzzleforge
 
 # A random mate-in-1, solution revealed, reproducible via a seed:
-python -m palamedes --goal mate_in_1 --seed 5 --reveal
+python -m chesspuzzleforge --goal mate_in_1 --seed 5 --reveal
 
 # Pick a type: mate_in_1 | mate_in_2 | win_material
-python -m palamedes --goal mate_in_2 --reveal
+python -m chesspuzzleforge --goal mate_in_2 --reveal
 
 # Derive the mate-in-1 for ANY position you supply (quote the FEN):
-python -m palamedes --fen "6k1/5ppp/8/8/8/8/8/R6K w - - 0 1" --reveal
+python -m chesspuzzleforge --fen "6k1/5ppp/8/8/8/8/8/R6K w - - 0 1" --reveal
 
 # Inspect the bank / re-verify every puzzle with the engine:
-python -m palamedes --list
-python -m palamedes --verify-all
+python -m chesspuzzleforge --list
+python -m chesspuzzleforge --verify-all
 
 # Filter by difficulty band, or solve interactively:
-python -m palamedes --goal mate_in_2 --difficulty hard --reveal
-python -m palamedes --seed 5 --solve      # type your move as SAN (Qd8#) or UCI (d1d8)
+python -m chesspuzzleforge --goal mate_in_2 --difficulty hard --reveal
+python -m chesspuzzleforge --seed 5 --solve      # type your move as SAN (Qd8#) or UCI (d1d8)
 
 # Mine verified puzzles from the games in a PGN file (JSON lines on stdout,
 # progress on stderr); bound the work with --max-games / --max-plies:
-python -m palamedes --mine games.pgn --max-games 100 > mined.jsonl
+python -m chesspuzzleforge --mine games.pgn --max-games 100 > mined.jsonl
 
 # Synthesize a fresh, engine-proven endgame from a piece set (mate in 2 by
 # default; deterministic with --seed; --count emits JSON lines like --mine):
-python -m palamedes --synth KRK --seed 7 --reveal
-python -m palamedes --synth KQK --seed 9 --count 2 > synthesized.jsonl
+python -m chesspuzzleforge --synth KRK --seed 7 --reveal
+python -m chesspuzzleforge --synth KQK --seed 9 --count 2 > synthesized.jsonl
 ```
 
 Example output:
@@ -164,7 +164,7 @@ Solution: Qd8#  (UCI: d1d8)
 positions). Mining it end to end:
 
 ```bash
-python -m palamedes --mine tests/data/opera_game.pgn > mined.jsonl
+python -m chesspuzzleforge --mine tests/data/opera_game.pgn > mined.jsonl
 ```
 
 Progress goes to stderr:
@@ -197,7 +197,7 @@ output trustworthy:
   file whose fourth move is illegal:
 
   ```
-  $ python -m palamedes --mine broken.pgn
+  $ python -m chesspuzzleforge --mine broken.pgn
   Mining failed: game 1: move 4 ('Kd4') does not name a legal move: no legal move matches SAN 'Kd4'
   $ echo $?
   2
@@ -210,7 +210,7 @@ positions until the engine proves one is mate in exactly the requested number
 of moves, then re-proves it through `verify_puzzle` before printing anything:
 
 ```bash
-python -m palamedes --synth KRK --seed 7 --reveal
+python -m chesspuzzleforge --synth KRK --seed 7 --reveal
 ```
 
 ```
@@ -253,7 +253,7 @@ rules keep the output trustworthy:
   rather than looping or downgrading the goal:
 
   ```
-  $ python -m palamedes --synth KPK
+  $ python -m chesspuzzleforge --synth KPK
   Synthesis failed: invalid piece set 'KPK': unsupported piece(s) P; use Q, R, B or N (pawns and extra kings are not supported)
   $ echo $?
   2
@@ -287,8 +287,8 @@ CI runs the full suite, ruff, and mypy on a single validated Python version
 ## Project layout
 
 ```
-Palamedes/
-├── palamedes/
+ChessPuzzleForge/
+├── chesspuzzleforge/
 │   ├── __init__.py       # public API re-exports
 │   ├── engine.py         # pure-Python chess engine (FEN, moves, perft, SAN, mate)
 │   ├── fen_bank.py       # curated, verified puzzle bank, typed (zero deps)
@@ -301,7 +301,7 @@ Palamedes/
 │   ├── miner.py          # prefiltered, verified puzzle mining over PGN games
 │   ├── synth.py          # seeded, verified endgame synthesis from piece sets
 │   ├── cli.py            # argparse CLI (+ --solve, --mine, --synth)
-│   └── __main__.py       # enables `python -m palamedes`
+│   └── __main__.py       # enables `python -m chesspuzzleforge`
 ├── tests/                # engine, bank, verifier, generator, cli, perft, san,
 │   │                     # mate3, tactics, difficulty, export, golden, hostile,
 │   │                     # pgn, miner, cli_mine, synth, cli_synth, perf,
@@ -309,11 +309,25 @@ Palamedes/
 │   ├── data/mined_games.pgn  # toy mining fixture (castling + promotion + tactics)
 │   ├── data/opera_game.pgn   # real-game mining fixture (full 32-man positions)
 │   └── test_with_chess.py    # OPTIONAL cross-check vs python-chess (skips if absent)
+├── docs/                 # PRD, TDD, App Flow, Design Brief (+ archived specs)
 ├── pyproject.toml        # ruff + mypy --strict config
 ├── conftest.py           # makes the package importable under bare `pytest`
 ├── requirements.txt      # optional dev deps (pytest, chess) — core needs neither
 └── README.md
 ```
+
+## Design documents
+
+Written retrospectively against the shipped code, not against this README:
+
+- [`docs/PRD.md`](docs/PRD.md) — the problem, who it is for, and what is
+  deliberately out of scope.
+- [`docs/TDD.md`](docs/TDD.md) — the architecture as built: data shapes, module
+  contracts, the search budgets, failure modes and rollback.
+- [`docs/APP_FLOW.md`](docs/APP_FLOW.md) — every CLI mode and every terminal
+  state, including the error paths and their exit codes.
+- [`docs/DESIGN_BRIEF.md`](docs/DESIGN_BRIEF.md) — the terminal-output design
+  rules (stream discipline, ASCII-only board, no colour) and why.
 
 ## How it fits together
 

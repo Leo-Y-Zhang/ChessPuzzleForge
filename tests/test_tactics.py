@@ -9,8 +9,8 @@ candidate whose proof cannot finish within the node budget is NOT reported
 
 import time
 
-from palamedes.engine import Board
-from palamedes.tactics import find_forks, find_pins, find_skewers
+from chesspuzzleforge.engine import Board
+from chesspuzzleforge.tactics import find_forks, find_pins, find_skewers
 
 # White Ng4-f6+ forks the black king (e8) and queen (e4); the knight is safe, so
 # after the king moves White plays Nxe4 and wins the queen.

@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "palamedes"
+name = "chesspuzzleforge"
 version = "2.2.0"
 description = "Engine-verified offline chess puzzle generator (mate-in-N, tactics). Pure Python, zero runtime dependencies; every answer is proven by a bundled from-scratch chess engine."
 readme = "README.md"
@@ -19,10 +19,10 @@ test = ["pytest>=7", "chess>=1.9"]
 dev = ["pytest>=7", "chess>=1.9", "ruff>=0.6", "mypy>=1.11"]
 
 [project.scripts]
-palamedes = "palamedes.cli:main"
+chesspuzzleforge = "chesspuzzleforge.cli:main"
 
 [tool.setuptools]
-packages = ["palamedes"]
+packages = ["chesspuzzleforge"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -39,7 +39,7 @@ ignore = ["SIM108"]
 [tool.mypy]
 python_version = "3.11"
 strict = true
-files = ["palamedes"]
+files = ["chesspuzzleforge"]
 # python-chess (dev/test-only referee) has no bundled stubs; the shipped core
 # never imports it, but guard against a stray import being a hard mypy error.
 [[tool.mypy.overrides]]

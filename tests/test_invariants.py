@@ -8,8 +8,8 @@ the shipped package never drags in the optional ``python-chess`` referee.
 import subprocess
 import sys
 
-from palamedes.engine import Board
-from palamedes.generator import generate_puzzle
+from chesspuzzleforge.engine import Board
+from chesspuzzleforge.generator import generate_puzzle
 
 START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 KIWIPETE_FEN = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"
@@ -33,8 +33,8 @@ def test_generate_puzzle_is_deterministic_by_seed():
     assert generate_puzzle(seed=5) == generate_puzzle(seed=5)
 
 
-def test_import_palamedes_does_not_need_chess():
+def test_import_chesspuzzleforge_does_not_need_chess():
     # The shipped core must import with zero third-party dependencies.
-    code = "import sys, palamedes; assert 'chess' not in sys.modules"
+    code = "import sys, chesspuzzleforge; assert 'chess' not in sys.modules"
     result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr

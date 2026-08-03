@@ -3,11 +3,11 @@ safely - never an unhandled traceback or a silent wrong guess."""
 
 import pytest
 
-from palamedes.difficulty import difficulty
-from palamedes.engine import Board, move_from_uci, parse_san
-from palamedes.export import puzzle_to_json, puzzle_to_pgn
-from palamedes.generator import generate_puzzle
-from palamedes.tactics import find_forks, find_pins, find_skewers
+from chesspuzzleforge.difficulty import difficulty
+from chesspuzzleforge.engine import Board, move_from_uci, parse_san
+from chesspuzzleforge.export import puzzle_to_json, puzzle_to_pgn
+from chesspuzzleforge.generator import generate_puzzle
+from chesspuzzleforge.tactics import find_forks, find_pins, find_skewers
 
 START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 

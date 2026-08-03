@@ -8,7 +8,7 @@ the game and line - never a silent misparse.
 
 import pytest
 
-from palamedes.pgn import PgnError, read_games
+from chesspuzzleforge.pgn import PgnError, read_games
 
 SIMPLE = """\
 [Event "Test"]

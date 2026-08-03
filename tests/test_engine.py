@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from palamedes.engine import (
+from chesspuzzleforge.engine import (
     Board,
     move_from_uci,
     move_to_san,

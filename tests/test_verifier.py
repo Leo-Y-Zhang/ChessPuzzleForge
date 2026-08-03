@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import time
 
-from palamedes.engine import Board
-from palamedes.fen_bank import get_puzzle
-from palamedes.verifier import (
+from chesspuzzleforge.engine import Board
+from chesspuzzleforge.fen_bank import get_puzzle
+from chesspuzzleforge.verifier import (
     net_material_gain,
     verify_puzzle,
     verify_solution,

@@ -8,7 +8,7 @@ promotions, disambiguation, en passant, and check/mate suffixes.
 
 import pytest
 
-from palamedes.engine import Board, move_to_san, parse_san
+from chesspuzzleforge.engine import Board, move_to_san, parse_san
 
 START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 KIWIPETE = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"

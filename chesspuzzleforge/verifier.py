@@ -1,4 +1,4 @@
-"""Puzzle verification built on the self-contained :mod:`palamedes.engine`.
+"""Puzzle verification built on the self-contained :mod:`chesspuzzleforge.engine`.
 
 The verifier confirms that a puzzle's stated solution really achieves its goal:
 

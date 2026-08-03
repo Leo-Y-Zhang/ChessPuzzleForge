@@ -2,9 +2,9 @@
 
 import pytest
 
-from palamedes.difficulty import difficulty
-from palamedes.fen_bank import get_puzzle
-from palamedes.generator import generate_puzzle
+from chesspuzzleforge.difficulty import difficulty
+from chesspuzzleforge.fen_bank import get_puzzle
+from chesspuzzleforge.generator import generate_puzzle
 
 
 def test_deeper_mate_scores_harder():

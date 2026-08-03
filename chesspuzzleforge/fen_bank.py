@@ -3,7 +3,7 @@
 Every entry is a plain dict so the bank has zero third-party dependencies and
 can be loaded and tested with only the Python standard library.  Each puzzle's
 correctness is asserted by the project's tests using the pure-Python engine in
-:mod:`palamedes.engine`, so the answers below are verified, not assumed.
+:mod:`chesspuzzleforge.engine`, so the answers below are verified, not assumed.
 
 Puzzle schema
 -------------

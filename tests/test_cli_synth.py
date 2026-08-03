@@ -6,7 +6,7 @@ import json
 
 import pytest
 
-from palamedes.cli import main
+from chesspuzzleforge.cli import main
 
 # Same empirically chosen fast seeds as tests/test_synth.py (kept local: test
 # modules are not importable as a package under bare pytest).

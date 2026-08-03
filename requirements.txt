@@ -1,4 +1,4 @@
-# Palamedes (chess puzzle generator) - dependencies
+# ChessPuzzleForge (chess puzzle generator) - dependencies
 #
 # The CORE of this project (engine, puzzle bank, verifier, generator, CLI and
 # their unit tests) has ZERO third-party dependencies - it runs on the Python

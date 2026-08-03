@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from palamedes.cli import main
+from chesspuzzleforge.cli import main
 
 FIXTURE_PATH = Path(__file__).parent / "data" / "mined_games.pgn"
 

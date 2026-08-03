@@ -4,31 +4,31 @@ Examples
 --------
 Print a random puzzle (position hidden solution)::
 
-    python -m palamedes
+    python -m chesspuzzleforge
 
 Print a random mate-in-1 and immediately reveal the answer::
 
-    python -m palamedes --goal mate_in_1 --reveal
+    python -m chesspuzzleforge --goal mate_in_1 --reveal
 
 Deterministic puzzle (useful for demos/tests)::
 
-    python -m palamedes --seed 7 --reveal
+    python -m chesspuzzleforge --seed 7 --reveal
 
 Derive the mate-in-1 for an arbitrary position of your own::
 
-    python -m palamedes --fen "6k1/5ppp/8/8/8/8/8/R6K w - - 0 1" --reveal
+    python -m chesspuzzleforge --fen "6k1/5ppp/8/8/8/8/8/R6K w - - 0 1" --reveal
 
 List every puzzle in the bank::
 
-    python -m palamedes --list
+    python -m chesspuzzleforge --list
 
 Mine verified puzzles from the games in a PGN file (JSON lines on stdout)::
 
-    python -m palamedes --mine games.pgn --max-games 100 > mined.jsonl
+    python -m chesspuzzleforge --mine games.pgn --max-games 100 > mined.jsonl
 
 Synthesize a fresh, verified mate-in-2 from a bounded piece set::
 
-    python -m palamedes --synth KRK --seed 7 --reveal
+    python -m chesspuzzleforge --synth KRK --seed 7 --reveal
 """
 
 from __future__ import annotations
@@ -52,7 +52,7 @@ _SYNTH_DEPTHS = {"mate_in_1": 1, "mate_in_2": 2, "mate_in_3": 3}
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="palamedes",
+        prog="chesspuzzleforge",
         description="Generate and verify offline chess puzzles (mate-in-1/2, tactics).",
     )
     parser.add_argument(
