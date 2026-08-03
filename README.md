@@ -1,10 +1,10 @@
-# ChessPuzzleForge - engine-verified chess puzzle generator (pure Python, zero deps)
+# PuzzleForge - engine-verified chess puzzle generator (pure Python, zero deps)
 
-[![CI](https://github.com/GreenPandaTech/ChessPuzzleForge/actions/workflows/ci.yml/badge.svg)](https://github.com/GreenPandaTech/ChessPuzzleForge/actions/workflows/ci.yml)
+[![CI](https://github.com/GreenPandaTech/PuzzleForge/actions/workflows/ci.yml/badge.svg)](https://github.com/GreenPandaTech/PuzzleForge/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![Dependencies](https://img.shields.io/badge/runtime%20deps-none-brightgreen)
 
-ChessPuzzleForge is an offline chess puzzle generator that ships with its own
+PuzzleForge is an offline chess puzzle generator that ships with its own
 chess engine and **proves** every answer it gives you. It does not store a
 pre-baked answer key and hope it is right: each puzzle's solution is re-derived
 and re-checked by a bundled forced-mate search, so the tool cannot serve a
@@ -106,8 +106,8 @@ not published to PyPI and imports only the standard library, so you run it in
 place with `python -m chesspuzzleforge`.
 
 ```bash
-git clone https://github.com/GreenPandaTech/ChessPuzzleForge.git
-cd ChessPuzzleForge
+git clone https://github.com/GreenPandaTech/PuzzleForge.git
+cd PuzzleForge
 
 # A random puzzle, solution hidden:
 python -m chesspuzzleforge
@@ -287,7 +287,7 @@ CI runs the full suite, ruff, and mypy on a single validated Python version
 ## Project layout
 
 ```
-ChessPuzzleForge/
+PuzzleForge/
 ├── chesspuzzleforge/
 │   ├── __init__.py       # public API re-exports
 │   ├── engine.py         # pure-Python chess engine (FEN, moves, perft, SAN, mate)
