@@ -9,7 +9,7 @@ description = "Engine-verified offline chess puzzle generator (mate-in-N, tactic
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Proprietary - All Rights Reserved" }
-authors = [{ name = "GreenPandaTech" }]
+authors = [{ name = "Leo-Y-Zhang" }]
 keywords = ["chess", "puzzle", "mate-in-n", "tactics", "offline", "zero-dependency"]
 dependencies = []
 
