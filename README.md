@@ -1,6 +1,6 @@
-# PuzzleForge - engine-verified chess puzzle generator (pure Python, zero deps)
+# ChessPuzzleForge - engine-verified chess puzzle generator (pure Python, zero deps)
 
-[![CI](https://github.com/Leo-Y-Zhang/PuzzleForge/actions/workflows/ci.yml/badge.svg)](https://github.com/Leo-Y-Zhang/PuzzleForge/actions/workflows/ci.yml)
+[![CI](https://github.com/Leo-Y-Zhang/ChessPuzzleForge/actions/workflows/ci.yml/badge.svg)](https://github.com/Leo-Y-Zhang/ChessPuzzleForge/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![Dependencies](https://img.shields.io/badge/runtime%20deps-none-brightgreen)
 
@@ -106,7 +106,7 @@ not published to PyPI and imports only the standard library, so you run it in
 place with `python -m chesspuzzleforge`.
 
 ```bash
-git clone https://github.com/Leo-Y-Zhang/PuzzleForge.git
+git clone https://github.com/Leo-Y-Zhang/ChessPuzzleForge.git
 cd PuzzleForge
 
 # A random puzzle, solution hidden:
