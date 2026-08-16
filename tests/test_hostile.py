@@ -6,7 +6,7 @@ import pytest
 from chesspuzzleforge.difficulty import difficulty
 from chesspuzzleforge.engine import Board, move_from_uci, parse_san
 from chesspuzzleforge.export import puzzle_to_json, puzzle_to_pgn
-from chesspuzzleforge.generator import generate_puzzle
+from chesspuzzleforge.generator import generate_puzzle, make_puzzle_from_position
 from chesspuzzleforge.tactics import find_forks, find_pins, find_skewers
 
 START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
@@ -25,6 +25,32 @@ START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 def test_board_from_fen_rejects_bad_fen(bad_fen):
     with pytest.raises(ValueError):
         Board.from_fen(bad_fen)
+
+
+@pytest.mark.parametrize(
+    "bad_fen",
+    [
+        # The target is on a rank no double push can pass over.
+        "3k4/1Pp1p3/8/8/B7/3Pq3/8/3R2K1 w - e4 0 1",
+        # Right rank, but no black pawn on f5 to have made the push.
+        "rnbqkbnr/ppp1p1pp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq f6 0 3",
+        # Right rank and a white pawn on e4, but the target square is occupied.
+        "rnbqkbnr/pppppppp/8/8/4P3/4N3/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+    ],
+)
+def test_board_from_fen_rejects_an_impossible_en_passant_square(bad_fen):
+    with pytest.raises(ValueError):
+        Board.from_fen(bad_fen)
+
+
+def test_derived_mate_cannot_rest_on_an_impossible_en_passant_capture():
+    # The pawn on d3 "captures en passant" on e4: that removes the black queen
+    # from e3 and discovers mate from Rd1. It is not a chess move - with White
+    # to move the target can only be on rank 6, behind a black pawn that has
+    # just double-pushed. The engine took the field on trust, so the CLI printed
+    # "Solution: dxe4#" for this position and called it a proven mate in one.
+    with pytest.raises(ValueError):
+        make_puzzle_from_position("3k4/1Pp1p3/8/8/B7/3Pq3/8/3R2K1 w - e4 0 1")
 
 
 def test_move_from_uci_rejects_malformed_and_illegal():

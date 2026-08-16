@@ -9,6 +9,20 @@ uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **An impossible en-passant square in a FEN is now rejected.** `Board.from_fen`
+  took the field on trust, so `--fen "3k4/1Pp1p3/8/8/B7/3Pq3/8/3R2K1 w - e4 0 1"`
+  printed `Solution: dxe4#` and called it a proven mate in one: the pawn on d3
+  "captured en passant" on an empty e4, which removed the black queen from e3
+  and discovered mate from Rd1. No such move exists - with White to move the
+  target can only sit on rank 6, be empty, and have a black pawn just beyond it
+  that has double-pushed. Those three conditions are now checked at parse time,
+  and a field failing them exits 2 with `Invalid FEN: ...`, the documented
+  failure for that boundary. Positions the engine produces itself always satisfy
+  them, so nothing legal changed; the suite is now 293 tests (227 without the
+  optional referee).
+
 ### Changed
 
 - **Renamed: `Palamedes` -> `ChessPuzzleForge`.** The repository, the import

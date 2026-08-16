@@ -202,7 +202,7 @@ would leave the project's central claim resting on self-agreement.
 | Malformed PGN misparsed as legal moves | the user, silently, in the worst case | `read_games` shape checks and `parse_san` legality; both fail loud with game and line | nothing emitted; exit 2 |
 | Synthesis budget exhausted (e.g. `KNK`) | the user | `ValueError` ⇒ `Synthesis failed: …`, exit 2 | raise `--tries`, change seed, or use a set that can mate — never a downgraded goal |
 | Non-determinism creeping in | CI | `tests/test_golden.py` digest tripwire; seeded determinism tests | revert the change |
-| Optional referee absent | nobody | `pytest.importorskip("chess")` ⇒ 1 skipped, 223 passed | none needed; this is the supported state |
+| Optional referee absent | nobody | `pytest.importorskip("chess")` ⇒ 1 skipped, 227 passed | none needed; this is the supported state |
 
 ## The rename is the only non-internal change
 
@@ -233,7 +233,7 @@ file, and it is a single commit.
 
 ## The suite
 
-289 tests with the referee installed, 223 without it. The ones carrying the
+293 tests with the referee installed, 227 without it. The ones carrying the
 argument:
 
 **Positive.** `tests/test_fen_bank.py` re-verifies all 10 bank entries with the

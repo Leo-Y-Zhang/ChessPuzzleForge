@@ -154,6 +154,26 @@ class Board:
                 raise ValueError(f"FEN rank does not sum to 8 files: {row!r}")
 
         ep_square = None if ep_field == "-" else parse_square(ep_field)
+        if ep_square is not None:
+            # An en-passant target only means something when the opponent has
+            # just double-pushed a pawn over it: the target itself is empty, the
+            # pawn sits immediately beyond it, and which rank that is follows
+            # from whose move it is.  Taken on trust, the field lets ``push``
+            # "capture en passant" whatever happens to stand beyond the target -
+            # a queen on an untouched square - and the mate search then serves
+            # that illegal move as a proven answer.
+            ep_rank = 5 if turn == WHITE else 2
+            pawn = "p" if turn == WHITE else "P"
+            behind = square(file_of(ep_square), 4 if turn == WHITE else 3)
+            if (
+                rank_of(ep_square) != ep_rank
+                or squares[ep_square] is not None
+                or squares[behind] != pawn
+            ):
+                raise ValueError(
+                    f"invalid en-passant square in FEN: {ep_field!r} - no pawn has just "
+                    f"double-pushed past it, so no en-passant capture is possible"
+                )
         return cls(squares, turn, castling, ep_square, halfmove, fullmove)
 
     def to_fen(self) -> str:

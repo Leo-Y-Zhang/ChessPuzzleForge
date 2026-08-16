@@ -273,9 +273,9 @@ python -m pytest -q
 
 Test counts (local, Python 3.13):
 
-- Full suite, `python-chess` installed: **289 passed**.
+- Full suite, `python-chess` installed: **293 passed**.
 - Core only, no third-party libs:
-  `python -m pytest -q --ignore=tests/test_with_chess.py` → **223 passed**.
+  `python -m pytest -q --ignore=tests/test_with_chess.py` → **227 passed**.
 - With `python-chess` absent, `tests/test_with_chess.py` reports **1 skipped**
   rather than failing (it uses `pytest.importorskip("chess")`). The suite is also
   linted with **ruff** and type-checked with **mypy --strict** in CI.
