@@ -32,7 +32,7 @@ jobs:
           # here -- GraphRecords, which had the same unpinned install, went from
           # green to 55 lint errors purely because ruff 0.16.1 shipped. Both
           # versions below were verified against this exact tree (v2.2.0): ruff
-          # clean, mypy strict clean over 13 source files, 289 tests passing.
+          # clean, mypy strict clean over 13 source files, 293 tests passing.
           # pytest is deliberately left unpinned -- a runner upgrade does not
           # change whether the code is correct, it just runs the same assertions.
           pip install pytest ruff==0.16.1 mypy==2.3.0
@@ -42,7 +42,11 @@ jobs:
       - name: Type-check (mypy --strict)
         run: mypy
       - name: Test
-        run: pytest -q
+        # No -q here. pyproject already sets addopts = "-q", and a second one
+        # suppresses the summary line, so the log showed rows of dots and never
+        # said how many tests ran. In a repository whose product is verification
+        # that is the one line worth keeping.
+        run: pytest
   # The gitleaks binary directly rather than gitleaks-action, and the whole
   # history rather than a diff. The action scans only the range
   # <before>^..<after> that a push touched, so a secret committed earlier and

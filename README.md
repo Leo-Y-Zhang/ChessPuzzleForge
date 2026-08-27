@@ -4,7 +4,7 @@
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![Dependencies](https://img.shields.io/badge/runtime%20deps-none-brightgreen)
 
-PuzzleForge is an offline chess puzzle generator that ships with its own
+ChessPuzzleForge is an offline chess puzzle generator that ships with its own
 chess engine and **proves** every answer it gives you. It does not store a
 pre-baked answer key and hope it is right: each puzzle's solution is re-derived
 and re-checked by a bundled forced-mate search, so the tool cannot serve a
@@ -107,7 +107,7 @@ place with `python -m chesspuzzleforge`.
 
 ```bash
 git clone https://github.com/Leo-Y-Zhang/ChessPuzzleForge.git
-cd PuzzleForge
+cd ChessPuzzleForge
 
 # A random puzzle, solution hidden:
 python -m chesspuzzleforge
@@ -266,28 +266,34 @@ from `requirements.txt`:
 
 ```bash
 python -m venv .venv
-source .venv/Scripts/activate   # macOS/Linux: source .venv/bin/activate
+source .venv/bin/activate       # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-python -m pytest -q
+python -m pytest
 ```
+
+Pass no flags to `pytest`: `pyproject.toml` already sets `addopts = "-q"`, and a
+second `-q` makes pytest drop the summary line, which is the count you came for.
 
 Test counts (local, Python 3.13):
 
 - Full suite, `python-chess` installed: **293 passed**.
 - Core only, no third-party libs:
-  `python -m pytest -q --ignore=tests/test_with_chess.py` → **227 passed**.
+  `python -m pytest --ignore=tests/test_with_chess.py` → **227 passed**.
 - With `python-chess` absent, `tests/test_with_chess.py` reports **1 skipped**
-  rather than failing (it uses `pytest.importorskip("chess")`). The suite is also
+  rather than failing (it uses `pytest.importorskip("chess")`), so a run with no
+  third-party libs installed reads **227 passed, 1 skipped**. The suite is also
   linted with **ruff** and type-checked with **mypy --strict** in CI.
 
-CI runs the full suite, ruff, and mypy on a single validated Python version
-(3.13) to stay within free-tier minutes; `requires-python` is `>=3.11` (see
+CI installs `requirements.txt`, so the `python-chess` cross-checks really run
+there rather than skipping, and it counts the same 293. It runs on a single
+validated Python version (3.13) to stay within free-tier minutes;
+`requires-python` is `>=3.11` (see
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
 
 ## Project layout
 
 ```
-PuzzleForge/
+ChessPuzzleForge/
 ├── chesspuzzleforge/
 │   ├── __init__.py       # public API re-exports
 │   ├── engine.py         # pure-Python chess engine (FEN, moves, perft, SAN, mate)
