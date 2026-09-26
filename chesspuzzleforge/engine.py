@@ -174,7 +174,21 @@ class Board:
                     f"invalid en-passant square in FEN: {ep_field!r} - no pawn has just "
                     f"double-pushed past it, so no en-passant capture is possible"
                 )
-        return cls(squares, turn, castling, ep_square, halfmove, fullmove)
+        # Each side has exactly one king, and the side that just moved cannot
+        # have left its own king in check. Without these the mate search runs
+        # on positions no game reaches: with the opponent already in check,
+        # every move that keeps the check was served as a proven "mate".
+        for king in ("K", "k"):
+            if squares.count(king) != 1:
+                raise ValueError(
+                    f"invalid FEN: need exactly one {king!r} king, found {squares.count(king)}"
+                )
+        board = cls(squares, turn, castling, ep_square, halfmove, fullmove)
+        if board.is_check(BLACK if turn == WHITE else WHITE):
+            raise ValueError(
+                "invalid FEN: the side not to move is in check, which no legal game reaches"
+            )
+        return board
 
     def to_fen(self) -> str:
         rows = []

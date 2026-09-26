@@ -89,3 +89,27 @@ def test_tactics_on_a_bare_king_board_return_empty():
     assert find_forks(board) == []
     assert find_pins(board) == []
     assert find_skewers(board) == []
+
+
+@pytest.mark.parametrize(
+    "bad_fen",
+    [
+        "8/8/8/8/8/8/8/R6K w - - 0 1",  # no black king
+        "k7/8/8/8/8/8/8/R7 w - - 0 1",  # no white king
+        "k6k/8/8/8/8/8/8/R6K w - - 0 1",  # two black kings
+        # Black is in check with White to move: Black's last move left its own
+        # king attacked, which no legal game reaches.
+        "7k/8/8/8/8/8/6R1/K6R w - - 0 1",
+    ],
+)
+def test_board_from_fen_rejects_an_unreachable_king_setup(bad_fen):
+    with pytest.raises(ValueError):
+        Board.from_fen(bad_fen)
+
+
+def test_derived_mate_cannot_rest_on_the_side_not_to_move_being_in_check():
+    # Black stands in check from Rh1 with White to move, so every White move
+    # that keeps the check "mates": the deriver listed 13 proven mates in one
+    # (Kb1#, Rg3#, ...) for a position that cannot arise.
+    with pytest.raises(ValueError):
+        make_puzzle_from_position("7k/8/8/8/8/8/6R1/K6R w - - 0 1")
