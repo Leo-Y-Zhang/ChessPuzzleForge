@@ -181,12 +181,12 @@ class Board:
         for king in ("K", "k"):
             if squares.count(king) != 1:
                 raise ValueError(
-                    f"invalid FEN: need exactly one {king!r} king, found {squares.count(king)}"
+                    f"need exactly one {king!r} king in FEN, found {squares.count(king)}"
                 )
         board = cls(squares, turn, castling, ep_square, halfmove, fullmove)
         if board.is_check(BLACK if turn == WHITE else WHITE):
             raise ValueError(
-                "invalid FEN: the side not to move is in check, which no legal game reaches"
+                "the side not to move is in check in FEN, which no legal game reaches"
             )
         return board
 
