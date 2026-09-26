@@ -11,6 +11,22 @@ uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- **A material "win" that stalemates or walks into mate is no longer proven.**
+  The `win_material` check looked only at a recapture on the destination
+  square, and the fork prover scored a position with no legal moves as "no
+  material change". So `Rxd6` on `4r1k1/5ppp/3q4/8/8/8/5PPP/3R2K1 w` verified
+  as winning 9 pawns although `...Re1` is mate, `Qxc7` on
+  `k7/2p5/8/8/8/8/8/2Q4K w` verified although it is stalemate, and `Nxe6` on
+  `3q1r1k/6pp/4b3/8/3N4/8/1r3PPP/6K1 w` was mined as a verified fork although
+  `...Rb1` is mate. The verifier and `find_forks` now both reject a move after
+  which the defender is stalemated or has a mate in one
+  (`engine.game_ending_refutation`).
+- **A FEN with a missing or extra king, or with the side not to move in check,
+  is now rejected.** With Black already in check and White to move, every White
+  move that kept the check "mated": `--fen "7k/8/8/8/8/8/6R1/K6R w - - 0 1"`
+  listed 13 proven mates in one. `Board.from_fen` now fails loud on such a
+  position (`Invalid FEN: ...`, exit 2).
+
 - **An impossible en-passant square in a FEN is now rejected.** `Board.from_fen`
   took the field on trust, so `--fen "3k4/1Pp1p3/8/8/B7/3Pq3/8/3R2K1 w - e4 0 1"`
   printed `Solution: dxe4#` and called it a proven mate in one: the pawn on d3
@@ -22,6 +38,13 @@ uses [Semantic Versioning](https://semver.org/).
   failure for that boundary. Positions the engine produces itself always satisfy
   them, so nothing legal changed; the suite is now 293 tests (227 without the
   optional referee).
+
+### Tests
+
+- Perft now also runs Kiwipete d3, position 3 d4, position 4 d3 (and its
+  colour-mirrored twin d1-d3), position 5 d3 and position 6 d1-d3 against the
+  published counts; all already matched.
+- The suite is now 313 tests (247 without the optional referee).
 
 ### Changed
 

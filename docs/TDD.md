@@ -87,7 +87,9 @@ In dependency order. Everything below is re-exported from
 
 **`engine.py`** has no dependencies within the package.
 `Board.from_fen(fen) -> Board` and `Board.to_fen() -> str` fail loud on a
-malformed FEN. `Board.legal_moves() -> list[Move]` is genuinely legal — castling
+malformed FEN, and on a position no game reaches (an impossible en-passant
+square, not exactly one king per side, or the side not to move in check).
+`Board.legal_moves() -> list[Move]` is genuinely legal — castling
 rights and transit squares, en passant, promotions, self-check filtered.
 `Board.is_check(color=None)`, `is_checkmate()` and `is_stalemate()` return
 `bool`. `Board.push(move) -> Board` returns a new position and raises on an empty
@@ -202,7 +204,7 @@ would leave the project's central claim resting on self-agreement.
 | Malformed PGN misparsed as legal moves | the user, silently, in the worst case | `read_games` shape checks and `parse_san` legality; both fail loud with game and line | nothing emitted; exit 2 |
 | Synthesis budget exhausted (e.g. `KNK`) | the user | `ValueError` ⇒ `Synthesis failed: …`, exit 2 | raise `--tries`, change seed, or use a set that can mate — never a downgraded goal |
 | Non-determinism creeping in | CI | `tests/test_golden.py` digest tripwire; seeded determinism tests | revert the change |
-| Optional referee absent | nobody | `pytest.importorskip("chess")` ⇒ 1 skipped, 227 passed | none needed; this is the supported state |
+| Optional referee absent | nobody | `pytest.importorskip("chess")` ⇒ 1 skipped, 247 passed | none needed; this is the supported state |
 
 ## The rename is the only non-internal change
 
@@ -233,7 +235,7 @@ file, and it is a single commit.
 
 ## The suite
 
-293 tests with the referee installed, 227 without it. The ones carrying the
+313 tests with the referee installed, 247 without it. The ones carrying the
 argument:
 
 **Positive.** `tests/test_fen_bank.py` re-verifies all 10 bank entries with the

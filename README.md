@@ -276,16 +276,16 @@ second `-q` makes pytest drop the summary line, which is the count you came for.
 
 Test counts (local, Python 3.13):
 
-- Full suite, `python-chess` installed: **293 passed**.
+- Full suite, `python-chess` installed: **313 passed**.
 - Core only, no third-party libs:
-  `python -m pytest --ignore=tests/test_with_chess.py` → **227 passed**.
+  `python -m pytest --ignore=tests/test_with_chess.py` → **247 passed**.
 - With `python-chess` absent, `tests/test_with_chess.py` reports **1 skipped**
   rather than failing (it uses `pytest.importorskip("chess")`), so a run with no
-  third-party libs installed reads **227 passed, 1 skipped**. The suite is also
+  third-party libs installed reads **247 passed, 1 skipped**. The suite is also
   linted with **ruff** and type-checked with **mypy --strict** in CI.
 
 CI installs `requirements.txt`, so the `python-chess` cross-checks really run
-there rather than skipping, and it counts the same 293. It runs on a single
+there rather than skipping, and it counts the same 313. It runs on a single
 validated Python version (3.13) to stay within free-tier minutes;
 `requires-python` is `>=3.11` (see
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml)).

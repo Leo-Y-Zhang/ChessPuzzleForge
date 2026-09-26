@@ -54,8 +54,8 @@ Each of these is a command rather than an opinion.
       detection, SAN and mate solutions against `python-chess`.
 - [x] **The shipped tool has zero runtime dependencies.**
       `import chesspuzzleforge; 'chess' in sys.modules` is `False`, pinned by a
-      subprocess test in `tests/test_invariants.py`. Core suite: **227 passed**
-      with no third-party library installed; full suite **293 passed** with the
+      subprocess test in `tests/test_invariants.py`. Core suite: **247 passed**
+      with no third-party library installed; full suite **313 passed** with the
       referee present.
 - [x] **A mate-in-N is exactly N.** The synthesizer accepts a position only when
       the prover finds mate at depth N *and* fails at every shallower depth.

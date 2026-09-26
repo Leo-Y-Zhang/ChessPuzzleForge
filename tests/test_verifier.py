@@ -120,3 +120,14 @@ def test_win_material_rejects_a_capture_that_stalemates():
     ok, msg = verify_solution(_win_material(fen, "c1c7", 1.0), "c1c7")
     assert not ok
     assert "stalemate" in msg
+
+
+def test_mate_in_2_accepts_a_proven_key_the_bank_does_not_list():
+    # Mate-in-2 answers are proven, not matched against a key: this bank puzzle
+    # lists Qh3 but Qd3 and Qf3 also force mate in two, and a solver who finds
+    # one of them is right. (Puzzles are not guaranteed dual-free.)
+    puzzle = get_puzzle("m2-queen-confine-a")
+    assert puzzle["solution"] == ["f1h3"]
+    for key in ("f1d3", "f1f3"):
+        ok, msg = verify_solution(puzzle, key)
+        assert ok, msg
