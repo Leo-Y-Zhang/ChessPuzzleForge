@@ -15,6 +15,7 @@ from .engine import (
     Board,
     Move,
     file_of,
+    game_ending_refutation,
     move_to_san,
     piece_color,
     rank_of,
@@ -182,6 +183,10 @@ def find_forks(
         except _BudgetExceeded:
             break  # out of budget: the remaining candidates stay unproven and unreported
         if net < min_gain:
+            continue
+        # The material search scores a mate or stalemate as "no change", so a
+        # fork that lets the defender mate at once would still "win" material.
+        if game_ending_refutation(child) is not None:
             continue
 
         target_sqs = list(piece_targets)

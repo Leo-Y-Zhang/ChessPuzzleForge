@@ -735,6 +735,23 @@ def parse_san(board: Board, san: str) -> Move:
     raise ValueError(f"ambiguous SAN {san!r}: {len(candidates)} legal moves match")
 
 
+def game_ending_refutation(board: Board) -> str | None:
+    """Why a material "win" that led to ``board`` is no win, or None.
+
+    ``board`` is the position right after the winning side's move, with the
+    defender to move. A material count cannot see that the move stalemated the
+    defender (a draw) or left a mate in one against the mover; both are checked
+    here so the verifier and the fork prover reject them the same way.
+    """
+    replies = board.legal_moves()
+    if not replies:
+        return None if board.is_check() else "stalemates the opponent (a draw)"
+    for reply in replies:
+        if board.push(reply).is_checkmate():
+            return f"allows mate in one ({reply.uci()})"
+    return None
+
+
 def perft(board: Board, depth: int) -> int:
     """Count leaf nodes of the legal move tree to ``depth`` (a move-gen pin).
 

@@ -89,3 +89,14 @@ def test_equal_pieces_line_is_neither_pin_nor_skewer():
     board = Board.from_fen(EQUAL_LINE)
     assert find_pins(board) == []
     assert find_skewers(board) == []
+
+
+# Nxe6 takes a bishop and forks the queen (d8) and rook (f8), and nothing can
+# recapture on e6 - but the knight leaves the back rank undefended and ...Rb1 is
+# mate. A mate was scored as "no material change", so the fork was reported
+# with a gain of 3 and the miner emitted it as a verified win-material puzzle.
+FORK_INTO_MATE = "3q1r1k/6pp/4b3/8/3N4/8/1r3PPP/6K1 w - - 0 1"
+
+
+def test_fork_that_allows_mate_in_one_is_not_reported():
+    assert find_forks(Board.from_fen(FORK_INTO_MATE)) == []
