@@ -174,7 +174,21 @@ class Board:
                     f"invalid en-passant square in FEN: {ep_field!r} - no pawn has just "
                     f"double-pushed past it, so no en-passant capture is possible"
                 )
-        return cls(squares, turn, castling, ep_square, halfmove, fullmove)
+        # Each side has exactly one king, and the side that just moved cannot
+        # have left its own king in check. Without these the mate search runs
+        # on positions no game reaches: with the opponent already in check,
+        # every move that keeps the check was served as a proven "mate".
+        for king in ("K", "k"):
+            if squares.count(king) != 1:
+                raise ValueError(
+                    f"need exactly one {king!r} king in FEN, found {squares.count(king)}"
+                )
+        board = cls(squares, turn, castling, ep_square, halfmove, fullmove)
+        if board.is_check(BLACK if turn == WHITE else WHITE):
+            raise ValueError(
+                "the side not to move is in check in FEN, which no legal game reaches"
+            )
+        return board
 
     def to_fen(self) -> str:
         rows = []
@@ -719,6 +733,23 @@ def parse_san(board: Board, san: str) -> Move:
     if not candidates:
         raise ValueError(f"no legal move matches SAN {san!r}")
     raise ValueError(f"ambiguous SAN {san!r}: {len(candidates)} legal moves match")
+
+
+def game_ending_refutation(board: Board) -> str | None:
+    """Why a material "win" that led to ``board`` is no win, or None.
+
+    ``board`` is the position right after the winning side's move, with the
+    defender to move. A material count cannot see that the move stalemated the
+    defender (a draw) or left a mate in one against the mover; both are checked
+    here so the verifier and the fork prover reject them the same way.
+    """
+    replies = board.legal_moves()
+    if not replies:
+        return None if board.is_check() else "stalemates the opponent (a draw)"
+    for reply in replies:
+        if board.push(reply).is_checkmate():
+            return f"allows mate in one ({reply.uci()})"
+    return None
 
 
 def perft(board: Board, depth: int) -> int:

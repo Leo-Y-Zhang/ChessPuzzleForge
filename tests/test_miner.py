@@ -258,3 +258,10 @@ def test_negative_bounds_are_rejected():
         mine_games(games, max_games=-1)
     with pytest.raises(ValueError):
         mine_games(games, max_plies=-1)
+
+
+def test_miner_does_not_emit_a_fork_that_walks_into_mate():
+    # See tests/test_tactics.py: Nxe6 forks queen and rook but allows ...Rb1#.
+    fen = "3q1r1k/6pp/4b3/8/3N4/8/1r3PPP/6K1 w - - 0 1"
+    text = f'[SetUp "1"]\n[FEN "{fen}"]\n[Result "*"]\n\n*\n'
+    assert [p for p in mine_pgn(text) if p["goal"] == "win_material"] == []

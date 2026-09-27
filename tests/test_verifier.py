@@ -85,3 +85,49 @@ def test_mate_in_2_on_a_full_board_verifies_the_candidate_without_a_full_scan():
     elapsed = time.perf_counter() - start
     assert ok, msg
     assert elapsed < 5.0, f"verifying a correct mate-in-2 unexpectedly slow: {elapsed:.2f}s"
+
+
+# A capture that wins material on the board but hands the opponent the game is
+# not a "win material" answer. The recapture model alone looked only at the
+# destination square, so both of these were accepted as proven.
+
+
+def _win_material(fen: str, uci: str, threshold: float) -> dict:
+    return {
+        "id": "t",
+        "fen": fen,
+        "goal": "win_material",
+        "solution": [uci],
+        "san": "",
+        "theme": "",
+        "threshold": threshold,
+    }
+
+
+def test_win_material_rejects_a_capture_that_allows_mate_in_one():
+    # Rxd6 takes the queen with no recapture, but it leaves the back rank:
+    # ...Re1 is mate. The verifier used to call this "wins 9 pawns".
+    fen = "4r1k1/5ppp/3q4/8/8/8/5PPP/3R2K1 w - - 0 1"
+    ok, msg = verify_solution(_win_material(fen, "d1d6", 8.0), "d1d6")
+    assert not ok
+    assert "mate" in msg
+
+
+def test_win_material_rejects_a_capture_that_stalemates():
+    # Qxc7 takes the last black pawn and leaves the bare king with no move and
+    # not in check: stalemate, a draw, from a position that is trivially won.
+    fen = "k7/2p5/8/8/8/8/8/2Q4K w - - 0 1"
+    ok, msg = verify_solution(_win_material(fen, "c1c7", 1.0), "c1c7")
+    assert not ok
+    assert "stalemate" in msg
+
+
+def test_mate_in_2_accepts_a_proven_key_the_bank_does_not_list():
+    # Mate-in-2 answers are proven, not matched against a key: this bank puzzle
+    # lists Qh3 but Qd3 and Qf3 also force mate in two, and a solver who finds
+    # one of them is right. (Puzzles are not guaranteed dual-free.)
+    puzzle = get_puzzle("m2-queen-confine-a")
+    assert puzzle["solution"] == ["f1h3"]
+    for key in ("f1d3", "f1f3"):
+        ok, msg = verify_solution(puzzle, key)
+        assert ok, msg

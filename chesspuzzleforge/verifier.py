@@ -12,7 +12,7 @@ None of this depends on ``python-chess``; it is all pure standard library.
 
 from __future__ import annotations
 
-from .engine import Board, Move, forced_mate_move, move_from_uci
+from .engine import Board, Move, forced_mate_move, game_ending_refutation, move_from_uci
 from .fen_bank import Puzzle
 
 # Standard material values in pawns; the king is never captured so it is 0.
@@ -101,6 +101,11 @@ def verify_solution(puzzle: Puzzle, uci: str) -> tuple[bool, str]:
         return False, "does not force mate in three" + hint
 
     if goal == "win_material":
+        # The recapture model looks only at the destination square; first rule
+        # out a capture that stalemates or walks into mate.
+        refutation = game_ending_refutation(board.push(move))
+        if refutation is not None:
+            return False, refutation
         threshold = float(puzzle.get("threshold", 1.0))
         gain = net_material_gain(board, uci)
         if gain >= threshold:

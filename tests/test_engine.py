@@ -104,7 +104,7 @@ def test_move_to_san_renders_mate_capture_castle_promotion():
     assert san("8/P7/8/8/8/8/8/k6K w - - 0 1", "a7a8n") == "a8=N"
     assert san("8/P7/8/8/8/8/8/k6K w - - 0 1", "a7a8q") == "a8=Q+"
     # Plain check marker.
-    assert san("4k3/8/8/8/8/8/8/4R2K w - - 0 1", "e1e7") == "Re7+"
+    assert san("4k3/8/8/8/8/8/8/R6K w - - 0 1", "a1e1") == "Re1+"
 
 
 def test_move_to_san_disambiguates_by_file_then_rank():

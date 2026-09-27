@@ -11,8 +11,10 @@ Puzzle schema
 * ``fen``         - the position (Forsyth-Edwards Notation).
 * ``goal``        - one of ``mate_in_1``, ``mate_in_2``, ``win_material``.
 * ``solution``    - list of accepted first moves in UCI notation.  For a mate
-                    puzzle any listed move forces the mate; usually there is a
-                    single unique key move.
+                    puzzle any listed move forces the mate.  Mate-in-1 entries
+                    list every mating move; deeper entries list one proven key,
+                    and other keys may exist (both mate-in-2 entries below have
+                    them) - the verifier accepts any move that forces the mate.
 * ``san``         - human-readable description of the key move (for display).
 * ``threshold``   - (win_material only) minimum material to win, in pawns.
 * ``theme``       - short human label for the tactic/mate motif.
