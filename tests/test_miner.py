@@ -46,14 +46,13 @@ EXPECTED = [
     },
     {
         # Game C, initial position: Nxe5 grabs a pawn and forks queen + rook.
-        # The threshold is what the verifier's recapture model proves for the
-        # first move (the pawn); the fork itself nets a full exchange later.
+        # After every defence, the capture search proves the pawn plus an exchange.
         "id": "mined-g3-p0-fork",
         "fen": "6k1/3r3p/2q3p1/4p3/8/5N2/5PPP/5RK1 w - - 0 1",
         "goal": "win_material",
         "solution": ["f3e5"],
         "san": "Nxe5",
-        "threshold": 1.0,
+        "threshold": 3.0,
         "theme": "mined knight fork",
     },
     {
@@ -176,15 +175,14 @@ def test_mining_a_small_file_completes_in_seconds():
 # --------------------------------------------------- a real full-length game
 OPERA_EXPECTED = [
     {
-        # Before 15. Bxd7+: the bishop grabs the d7 rook; after the forced
-        # recapture White is an exchange up (Morphy's actual move).
+        # Before move 15: the capture search prefers Qxe6+ for a three-pawn gain.
         "id": "mined-g1-p28-fork",
         "fen": "4kb1r/p2r1ppp/4qn2/1B2p1B1/4P3/1Q6/PPP2PPP/2KR4 w k - 2 15",
         "goal": "win_material",
-        "solution": ["b5d7"],
-        "san": "Bxd7+",
-        "threshold": 2.0,
-        "theme": "mined bishop fork",
+        "solution": ["b3e6"],
+        "san": "Qxe6+",
+        "threshold": 3.0,
+        "theme": "mined queen fork",
     },
     {
         # Before 16. Qb8+: the queen sacrifice forces 16... Nxb8 17. Rd8#.
@@ -240,6 +238,11 @@ def test_quiet_key_mate_in_2_on_a_large_board_is_missed_by_design():
 def test_illegal_move_in_a_game_fails_loud_naming_the_game():
     with pytest.raises(PgnError, match=r"game 1.*move 1.*'e5'"):
         mine_pgn('[Result "*"]\n\n1. e5 e5 *\n')  # e5 is not legal from the start
+
+
+def test_malformed_capture_in_a_game_fails_loud():
+    with pytest.raises(PgnError, match=r"game 1.*move 1.*'exe4'"):
+        mine_pgn("1. exe4 *")
 
 
 def test_invalid_fen_tag_fails_loud_naming_the_game():

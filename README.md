@@ -5,19 +5,18 @@
 ![Dependencies](https://img.shields.io/badge/runtime%20deps-none-brightgreen)
 
 ChessPuzzleForge is an offline chess puzzle generator that ships with its own
-chess engine and **proves** every answer it gives you. It does not store a
-pre-baked answer key and hope it is right: each puzzle's solution is re-derived
-and re-checked by a bundled forced-mate search, so the tool cannot serve a
-"mate in 1" that is not actually mate. The whole thing — engine, verifier,
-generator, CLI, and their tests — runs on the Python standard library with
-**no runtime dependencies**.
+chess engine and checks every listed solution using the models below. Each
+solution is checked by a bundled forced-mate or material capture search, so the
+tool cannot serve a "mate in 1" that is not actually mate. The whole thing —
+engine, verifier, generator, CLI, and their tests — runs on the Python standard
+library with **no runtime dependencies**.
 
 Puzzle types:
 
 - **Mate in 1** — draw from the curated bank, or derive one for any FEN you pass
 - **Mate in 2 / 3** — confirmed by a small exhaustive forced-mate search
-- **Win material** — a "grab the hanging piece" tactic checked 2 ply deep,
-  accounting for the opponent's best recapture
+- **Win material** — a gain that survives every legal reply, followed by optimal
+  capture play anywhere on the board, within a fixed search node budget
 - **Tactics** — forks (engine-proven), pins, and skewers, exposed via the API
 - **Mined from your games** — `--mine games.pgn` replays a PGN file and emits
   the verified mates and forks it finds along the mainlines (new in v2.1; see
@@ -74,7 +73,7 @@ deduped by position and re-verified through `verify_puzzle` before being
 emitted as deterministic JSON lines. Honest limits: only the mainline is
 replayed, and the prefilters trade recall for speed (above 8 men a mate in 2
 is found only via a checking key move, and a fork is emitted only when the
-recapture model proves the gain), so some tactics in a game will be missed —
+capture search proves the gain), so some tactics in a game will be missed —
 but nothing is emitted that the engine has not re-proven. Measured locally:
 the five-game test fixture (8 exactly-pinned puzzles) and the full 33-ply
 Opera game fixture (3 pinned puzzles, positions up to 32 men) each mine in
@@ -175,11 +174,11 @@ Mined 3 verified puzzles.
 ```
 
 and `mined.jsonl` now holds the game's famous finish as three puzzles — the
-exchange-winning bishop check, the queen-sacrifice mate in two, and the final
+material-winning queen check, the queen-sacrifice mate in two, and the final
 rook mate:
 
 ```json
-{"fen": "4kb1r/p2r1ppp/4qn2/1B2p1B1/4P3/1Q6/PPP2PPP/2KR4 w k - 2 15", "goal": "win_material", "id": "mined-g1-p28-fork", "san": "Bxd7+", "solution": ["b5d7"], "theme": "mined bishop fork", "threshold": 2.0}
+{"fen": "4kb1r/p2r1ppp/4qn2/1B2p1B1/4P3/1Q6/PPP2PPP/2KR4 w k - 2 15", "goal": "win_material", "id": "mined-g1-p28-fork", "san": "Qxe6+", "solution": ["b3e6"], "theme": "mined queen fork", "threshold": 3.0}
 {"fen": "4kb1r/p2n1ppp/4q3/4p1B1/4P3/1Q6/PPP2PPP/2KR4 w k - 0 16", "goal": "mate_in_2", "id": "mined-g1-p30-m2", "san": "Qb8+ (then mate next move)", "solution": ["b3b8"], "theme": "mined mate-in-two"}
 {"fen": "1n2kb1r/p4ppp/4q3/4p1B1/4P3/8/PPP2PPP/2KR4 w k - 0 17", "goal": "mate_in_1", "id": "mined-g1-p32-m1", "san": "Rd8#", "solution": ["d1d8"], "theme": "mined mate-in-one"}
 ```
@@ -280,7 +279,7 @@ Test counts (local, Python 3.13):
 - Core only, no third-party libs:
   `python -m pytest --ignore=tests/test_with_chess.py` → **247 passed**.
 - With `python-chess` absent, `tests/test_with_chess.py` reports **1 skipped**
-  rather than failing (it uses `pytest.importorskip("chess")`), so a run with no
+  rather than failing (it uses a module-level `pytest.skip`), so a run with no
   third-party libs installed reads **247 passed, 1 skipped**. The suite is also
   linted with **ruff** and type-checked with **mypy --strict** in CI.
 
@@ -350,9 +349,10 @@ Written retrospectively against the shipped code, not against this README:
 - **`fen_bank.py`** — 10 curated puzzles (6 mate-in-1, 2 mate-in-2, 1 mate-in-3,
   1 win-material) as typed dicts (id, FEN, goal, UCI solution(s), SAN, theme). No
   answer is trusted blindly — the test suite re-verifies each with the engine.
-- **`verifier.py`** — confirms a candidate move achieves a puzzle's goal: mate
-  in 1/2 via the search, or "win material" via a 2-ply capture evaluation that
-  accounts for the opponent's best recapture.
+- **`verifier.py`** — checks mate within 1/2/3 moves against every defence, or a
+  material threshold against every legal reply followed by the same bounded
+  capture search as `tactics.py`; it also rejects immediate stalemate and replies
+  that mate the mover in one for material goals.
 - **`generator.py`** — derives a mate-in-1 from a raw position
   (`derive_mate_in_1`), draws a validated one from the bank (`generate_puzzle`),
   and renders puzzles for the CLI.
@@ -370,6 +370,10 @@ This is a compact, self-verifying puzzle tool, not a full engine or trainer:
 
 - The forced-mate search is exhaustive and only intended for shallow depths
   (mate in 1 to 3). It is not a general-strength search.
+- Material proofs apply to the capture-search model: after one legal defensive
+  reply, only captures are searched, either side may decline to capture, and
+  promotion gains are not counted. Later quiet tactics and deeper mates are
+  outside this model; budget exhaustion rejects the claim as unproven.
 - Tactic detection (`find_forks` / `find_pins` / `find_skewers`) uses a shallow
   material capture search (alpha-beta, capped by a hard node budget — a fork
   whose proof does not finish in budget is not reported) and geometric ray
@@ -382,7 +386,7 @@ This is a compact, self-verifying puzzle tool, not a full engine or trainer:
   8 men the depth-2 search considers only checking key moves that leave at most
   4 replies (a quiet key move is then missed — this is pinned by a test); depth 3
   runs only at 6 men or fewer; and a fork is emitted only when the verifier's
-  recapture model proves the gain. Some tactics present in a game will therefore
+  capture search proves the gain. Some tactics present in a game will therefore
   be missed; everything emitted is engine-proven.
 - Mining speed is honest pure-Python speed: the five-game test fixture and the
   33-ply Opera game fixture each mine in under a second locally, so budget

@@ -27,6 +27,7 @@ So a1 == 0, h1 == 7, a8 == 56, h8 == 63.  White pieces are uppercase letters
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable
 from dataclasses import dataclass
 
@@ -696,6 +697,10 @@ def parse_san(board: Board, san: str) -> Move:
         kind = "P"
         rest = body
 
+    shape = r"(?:[a-h]x)?[a-h][1-8]" if kind == "P" else r"[a-h]?[1-8]?x?[a-h][1-8]"
+    if re.fullmatch(shape, rest) is None:
+        raise ValueError(f"malformed SAN {san!r}")
+    is_capture = "x" in rest
     rest = rest.replace("x", "")
     if len(rest) < 2:
         raise ValueError(f"malformed SAN {san!r} (no destination square)")
@@ -718,6 +723,8 @@ def parse_san(board: Board, san: str) -> Move:
     candidates: list[Move] = []
     for m in legal:
         if m.to_sq != dest or board.piece_at(m.from_sq) != want:
+            continue
+        if is_capture != (board.piece_at(m.to_sq) is not None or m.is_ep):
             continue
         mp = m.promotion.upper() if m.promotion else None
         if mp != promotion:
