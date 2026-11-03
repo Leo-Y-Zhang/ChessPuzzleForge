@@ -125,6 +125,8 @@ def _skip_variation(scanner: _Scanner, game_number: int) -> None:
         ch = scanner.peek()
         if ch == "{":
             _skip_brace_comment(scanner, game_number)
+        elif ch == ";":
+            scanner.skip_to_end_of_line()
         elif ch == "(":
             scanner.advance()
             depth += 1

@@ -14,10 +14,10 @@ from chesspuzzleforge.engine import Board, move_to_san, parse_san
 from chesspuzzleforge.fen_bank import PUZZLES
 from chesspuzzleforge.tactics import find_forks, find_pins
 
-# Pass ``exc_type=ImportError`` so pytest skips cleanly when the optional
-# ``python-chess`` package is simply absent, without the default (soon-to-be
-# error in pytest 9.1) PytestDeprecationWarning about catching ImportError.
-chess = pytest.importorskip("chess", exc_type=ImportError)
+try:
+    import chess
+except ImportError:
+    pytest.skip("python-chess is not installed", allow_module_level=True)
 
 REFERENCE_FENS = [p["fen"] for p in PUZZLES] + [
     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",

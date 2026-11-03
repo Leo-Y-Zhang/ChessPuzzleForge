@@ -104,6 +104,20 @@ def _win_material(fen: str, uci: str, threshold: float) -> dict:
     }
 
 
+def test_win_material_rejects_a_capture_that_loses_material_elsewhere():
+    # Rxd6 wins a pawn, but ...Rxa2 takes the queen on another square.
+    fen = "r6k/8/3p4/8/8/8/Q7/3R2K1 w - - 0 1"
+    assert net_material_gain(Board.from_fen(fen), "d1d6") == -8.0
+    ok, msg = verify_solution(_win_material(fen, "d1d6", 1.0), "d1d6")
+    assert not ok, msg
+
+
+def test_win_material_rejects_an_unproven_gain_when_search_budget_runs_out(monkeypatch):
+    monkeypatch.setattr("chesspuzzleforge.verifier._SEARCH_NODE_BUDGET", 0)
+    ok, msg = verify_puzzle(get_puzzle("tac-hanging-queen"))
+    assert not ok, msg
+
+
 def test_win_material_rejects_a_capture_that_allows_mate_in_one():
     # Rxd6 takes the queen with no recapture, but it leaves the back rank:
     # ...Re1 is mate. The verifier used to call this "wins 9 pawns".

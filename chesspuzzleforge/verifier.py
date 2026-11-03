@@ -4,8 +4,8 @@ The verifier confirms that a puzzle's stated solution really achieves its goal:
 
 * ``mate_in_1`` / ``mate_in_2`` - the move forces checkmate within the stated
   number of the mover's moves, against *any* defence.
-* ``win_material`` - the move is a capture that nets at least ``threshold``
-  pawns of material even after the opponent's best recapture on that square.
+* ``win_material`` - the move nets at least ``threshold`` pawns of material
+  against every legal reply, followed by the tactics module's capture search.
 
 None of this depends on ``python-chess``; it is all pure standard library.
 """
@@ -14,44 +14,32 @@ from __future__ import annotations
 
 from .engine import Board, Move, forced_mate_move, game_ending_refutation, move_from_uci
 from .fen_bank import Puzzle
+from .tactics import (
+    _INFINITY,
+    _SEARCH_NODE_BUDGET,
+    _Budget,
+    _BudgetExceeded,
+    _capture_value,
+    _forced_gain,
+)
 
 # Standard material values in pawns; the king is never captured so it is 0.
 PIECE_VALUES = {"P": 1.0, "N": 3.0, "B": 3.0, "R": 5.0, "Q": 9.0, "K": 0.0}
 
 
-def _value(piece: str | None) -> float:
-    if piece is None:
-        return 0.0
-    return PIECE_VALUES[piece.upper()]
-
-
 def net_material_gain(board: Board, uci: str) -> float:
-    """Material (in pawns) won by playing ``uci``, after the best recapture.
+    """Material won after every legal reply and optimal capture play anywhere.
 
-    A capture wins ``value(captured)`` immediately; if the opponent can then
-    recapture on the destination square, we subtract the value of the piece we
-    left there (they will choose the recapture that costs us the most, which for
-    a single square is simply the piece sitting on it).  En-passant captures are
-    handled correctly because the pushed board removes the captured pawn.
+    Uses the same bounded search as fork detection. Returns negative infinity
+    if the budget is exhausted, so an unproven gain cannot be accepted.
     """
     move = move_from_uci(board, uci)
-    captured_value = _value(board.piece_at(move.to_sq))
-    if move.is_ep:
-        captured_value = 1.0  # an en-passant capture always takes a pawn
-
-    after = board.push(move)
-    our_piece_value = _value(after.piece_at(move.to_sq))
-
-    # Can the opponent recapture on the destination square?
-    opponent_can_recapture = False
-    for reply in after.legal_moves():
-        if reply.to_sq == move.to_sq:
-            opponent_can_recapture = True
-            break
-
-    if opponent_can_recapture:
-        return captured_value - our_piece_value
-    return captured_value
+    try:
+        return _capture_value(board, move) - _forced_gain(
+            board.push(move), 1, -_INFINITY, _INFINITY, _Budget(_SEARCH_NODE_BUDGET)
+        )
+    except _BudgetExceeded:
+        return float("-inf")
 
 
 def verify_solution(puzzle: Puzzle, uci: str) -> tuple[bool, str]:
@@ -101,8 +89,8 @@ def verify_solution(puzzle: Puzzle, uci: str) -> tuple[bool, str]:
         return False, "does not force mate in three" + hint
 
     if goal == "win_material":
-        # The recapture model looks only at the destination square; first rule
-        # out a capture that stalemates or walks into mate.
+        # The capture search scores terminal positions as no material change;
+        # first rule out a move that stalemates or walks into mate in one.
         refutation = game_ending_refutation(board.push(move))
         if refutation is not None:
             return False, refutation

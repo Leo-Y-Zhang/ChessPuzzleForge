@@ -67,6 +67,13 @@ def test_strips_comments_nags_and_recursive_variations():
     assert game.result == "1/2-1/2"
 
 
+@pytest.mark.parametrize("comment", [")", "(", ")) ignored ( {", "(( ignored ))"])
+def test_semicolon_comments_inside_variations_ignore_parentheses(comment):
+    (game,) = read_games(f"1. e4 (1. d4 (1... d5 ; {comment}\n) 1... Nf6) e5 *")
+    assert game.moves == ("e4", "e5")
+    assert game.result == "*"
+
+
 def test_castling_promotion_and_suffixed_tokens_are_kept_verbatim():
     text = '[Result "1-0"]\n\n1. O-O! e8=Q?? 2. Rf8# 1-0\n'
     (game,) = read_games(text)

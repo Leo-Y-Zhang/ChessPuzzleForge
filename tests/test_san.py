@@ -24,6 +24,12 @@ def test_parse_basic_moves():
     assert parse_san(board, "Nf3").uci() == "g1f3"
 
 
+@pytest.mark.parametrize("san", ["exe4", "Nxf3", "exxe4", "xe4", "e4x", "ee4"])
+def test_parse_rejects_malformed_captures(san):
+    with pytest.raises(ValueError):
+        parse_san(Board.from_fen(START), san)
+
+
 def test_parse_castling_both_sides_and_zero_notation():
     board = Board.from_fen(CASTLE)
     assert parse_san(board, "O-O").uci() == "e1g1"
